@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <title>
+      {% block title %}OPELSS – OAU-PID e-Lab Support System{% endblock %}
+    </title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-..."
+      crossorigin="anonymous"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      integrity="sha512-..."
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/app.css') }}"
+    />
+    <link
+      rel="shortcut icon"
+      href="../static/images/favicorn.png"
+      type="image/png"
+    />
+  </head>
+  <body class="bg-light">
+    <div class="d-flex" id="app-shell">
+      {% if show_sidebar != False %}
+      <nav class="sidebar bg-dark text-white shadow-sm" id="sidebar">
+        <div
+          class="sidebar-header p-4 text-center border-bottom border-secondary"
+        >
+          <h4 class="mb-0">
+            <span
+              ><img
+                src="../static/images/logo.png"
+                alt="oau logo"
+                class="me-2"
+                style="height: 60px; width: auto; border-radius: 10px"
+            /></span>
+            OPELSS
+          </h4>
+          <p class="small text-muted mb-0">e-Lab Support System</p>
+        </div>
+        <div class="sidebar-body p-3">
+          <ul class="nav nav-pills flex-column gap-1">
+            <li class="nav-item">
+              <a
+                class="nav-link text-white"
+                href="{{ url_for('dashboard.home') }}"
+                ><i class="fas fa-chart-line me-2"></i>Dashboard</a
+              >
+            </li>
+            {% if current_user.is_authenticated and current_user.role == "Lab
+            Trainee" %}
+            <li class="nav-item">
+              <a
+                class="nav-link text-white"
+                href="{{ url_for('attendance.overview') }}"
+                ><i class="fas fa-clock me-2"></i>Attendance</a
+              >
+            </li>
+            {% endif %}
+            <li class="nav-item">
+              <a
+                class="nav-link text-white"
+                href="{{ url_for('assets.index') }}"
+                ><i class="fas fa-laptop-code me-2"></i>Assets</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link text-white"
+                href="{{ url_for('visitors.index') }}"
+                ><i class="fas fa-user-friends me-2"></i>Visitors</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link text-white"
+                href="{{ url_for('enquiries.index') }}"
+                ><i class="fas fa-question-circle me-2"></i>Enquiries</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link text-white"
+                href="{{ url_for('programmes.index') }}"
+                ><i class="fas fa-calendar-check me-2"></i>Programmes</a
+              >
+            </li>
+            {% if current_user.is_authenticated and current_user.role in
+            ["Admin", "HQ Trainee"] %}
+            <li class="nav-item">
+              <a
+                class="nav-link text-white"
+                href="{{ url_for('announcements.manage') }}"
+                ><i class="fas fa-bullhorn me-2"></i>Announcements</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link text-white"
+                href="{{ url_for('reports.index') }}"
+                ><i class="fas fa-file-export me-2"></i>Reports</a
+              >
+            </li>
+            {% endif %}
+            <li class="nav-item mt-3">
+              <a class="nav-link text-white" href="{{ url_for('auth.logout') }}"
+                ><i class="fas fa-sign-out-alt me-2"></i>Logout</a
+              >
+            </li>
+          </ul>
+        </div>
+      </nav>
+      {% endif %}
+
+      <div
+        class="flex-grow-1 {% if show_sidebar != False %}main-content{% endif %}"
+      >
+        <header
+          class="navbar navbar-expand-lg navbar-light bg-light shadow-sm sticky-top"
+        >
+          <div class="container-fluid">
+            <button class="btn btn-outline-dark d-lg-none" id="sidebarToggle">
+              <i class="fas fa-bars"></i>
+            </button>
+            <span class="navbar-brand mb-0 h1"
+              >{% if on_landing_page == True %}
+              <img
+                src="../static/images/unisa.png"
+                alt="unisa image"
+                class="me-2"
+                style="height: 40px; width: auto"
+              />
+              {% endif %} {%- block header_title -%} OPELSS{%- endblock -%}
+            </span>
+            <div class="d-flex align-items-center">
+              <span class="text-muted me-3"
+                >{% if not_on_landing_page != False %} {{ current_user.full_name
+                if current_user.is_authenticated else '' }}
+                <a
+                  href="{{ url_for('auth.reset_password_handler') }}"
+                  class="btn btn-secondary btn-lg text-white"
+                  >Change password</a
+                >
+                {% else %} {% block login_button %}{% endblock %} {% endif
+                %}</span
+              >
+            </div>
+          </div>
+        </header>
+
+        <main class="container-fluid py-4">
+          <div
+            class="toast-container position-fixed top-0 end-0 p-3"
+            id="toastContainer"
+          ></div>
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if
+          messages %} {% for category, message in messages %}
+          <div
+            class="toast align-items-center text-bg-{{ 'success' if category == 'success' else 'danger' if category == 'danger' else 'warning' if category == 'warning' else 'info' }} border-0 mb-2"
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+          >
+            <div class="d-flex">
+              <div class="toast-body">{{ message }}</div>
+              <button
+                type="button"
+                class="btn-close btn-close-white me-2 m-auto"
+                data-bs-dismiss="toast"
+                aria-label="Close"
+              ></button>
+            </div>
+          </div>
+          {% endfor %} {% endif %} {% endwith %} {% block content %}{% endblock
+          %}
+        </main>
+
+        <footer class="bg-light py-2 mt-5 border-top" id="contact_us">
+          <div class="container">
+            <div class="row align-items-center gy-3">
+              <!-- Left side: WhatsApp -->
+              <div class="col-md-4 text-center text-md-start">
+                <span class="text-dark"
+                  >HQ Support - Pretoria, Sunnyside Campus, Building 10:
+                </span>
+                <p>
+                  <a
+                    href="https://wa.me/+27691477831"
+                    target="_blank"
+                    class="text-decoration-none"
+                    style="color: #25d366"
+                    ><i class="fa-brands fa-whatsapp"></i
+                  ></a>
+                  +27 69 147 7831
+                </p>
+              </div>
+
+              <!-- Center: Copyright -->
+              <div class="col-md-4 text-center">
+                <p class="text-muted mb-0 small">
+                  &copy; 2026 ODEL Acceleration Unit.<br />All rights reserved.
+                </p>
+              </div>
+
+              <!-- Right side: YouTube/Tippytube -->
+              <div class="col-md-4 text-center text-md-end">
+                <a
+                  href="https://youtube.com/@tippytube2340?si=bThisWFr2WcO4p5_"
+                  target="_blank"
+                  class="text-decoration-none text-dark d-inline-flex align-items-center"
+                >
+                  <img
+                    src="{{ url_for('static', filename='images/tippytube.png') }}"
+                    alt="Tippytube"
+                    class="me-2"
+                    style="height: 24px; width: auto"
+                  />
+                  <span>tippytube</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <script src="https://jsdelivr.net"></script>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-..."
+      crossorigin="anonymous"
+    ></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const toastElList = [].slice.call(document.querySelectorAll(".toast"));
+        toastElList
+          .map((toastEl) => new bootstrap.Toast(toastEl, { delay: 5000 }))
+          .forEach((toast) => toast.show());
+        const toggle = document.getElementById("sidebarToggle");
+        if (toggle) {
+          toggle.addEventListener("click", () =>
+            document.getElementById("sidebar").classList.toggle("active"),
+          );
+        }
+      });
+    </script>
+  </body>
+</html>

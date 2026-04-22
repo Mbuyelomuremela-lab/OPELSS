@@ -1,0 +1,112 @@
+{% extends "base.html" %} {% block title %}Enquiries – OPELSS{% endblock %} {% block
+header_title %}Enquiry Management{% endblock %} {% block content %}
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card rounded-4 shadow-sm p-4">
+      <h5>New Enquiry</h5>
+      <form
+        method="post"
+        action="{{ url_for('enquiries.create') }}"
+        data-ajax="true"
+        data-refresh-target="#enquiriesTableBody"
+      >
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.student_name.label(class_='form-label') }}{{
+          form.student_name(class_='form-control') }}
+        </div>
+        <div class="mb-3">
+          {{ form.student_number.label(class_='form-label') }}{{
+          form.student_number(class_='form-control') }}
+        </div>
+        <div class="mb-3">
+          {{ form.category.label(class_='form-label') }}{{
+          form.category(class_='form-control') }}
+        </div>
+        <div class="mb-3">
+          {{ form.description.label(class_='form-label') }}{{
+          form.description(class_='form-control', rows=4) }}
+        </div>
+        <div class="mb-3">
+          {{ form.lab_id.label(class_='form-label') }}{{
+          form.lab_id(class_='form-select') }}
+        </div>
+        {{ form.submit(class_='btn btn-warning w-100 text-white') }}
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card rounded-4 shadow-sm p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Enquiry Records</h5>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-primary" id="enquiryUpdateBtn" type="button" disabled>Update</button>
+          <button class="btn btn-outline-danger" id="enquiryDeleteBtn" type="button" disabled>Delete</button>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle selectable-table" id="enquiriesTable">
+          <thead>
+            <tr>
+              <th>Tracking</th>
+              <th>Student</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Lab</th>
+              <th>Escalated</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="enquiriesTableBody">
+            {% for enquiry in enquiries %}
+            <tr data-id="{{ enquiry.id }}" data-tracking="{{ enquiry.tracking_number }}">
+              <td>{{ enquiry.tracking_number }}</td>
+              <td>{{ enquiry.student_name }}</td>
+              <td>{{ enquiry.category }}</td>
+              <td>{{ enquiry.status }}</td>
+              <td>{{ enquiry.lab.name }}</td>
+              <td>{{ 'Yes' if enquiry.escalated else 'No' }}</td>
+              <td><span class="text-muted">Select row above</span></td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" class="text-center text-muted">
+                No enquiries logged yet.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<form id="enquiryDeleteForm" method="post" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /></form>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const table = document.getElementById("enquiriesTable");
+    const updateBtn = document.getElementById("enquiryUpdateBtn");
+    const deleteBtn = document.getElementById("enquiryDeleteBtn");
+    let selected = null;
+    table?.addEventListener("click", (event) => {
+      const row = event.target.closest("tr[data-id]");
+      if (!row || !table.contains(row)) return;
+      table.querySelectorAll("tbody tr").forEach((r) => r.classList.remove("table-row-selected"));
+      row.classList.add("table-row-selected");
+      selected = row;
+      updateBtn.disabled = false;
+      deleteBtn.disabled = false;
+    });
+    updateBtn?.addEventListener("click", () => {
+      if (!selected) return;
+      window.location.href = `/enquiries/update/${selected.dataset.id}`;
+    });
+    deleteBtn?.addEventListener("click", () => {
+      if (!selected || !confirm(`Delete enquiry "${selected.dataset.tracking}"?`)) return;
+      const form = document.getElementById("enquiryDeleteForm");
+      form.action = `/enquiries/${selected.dataset.id}/delete`;
+      form.submit();
+    });
+  });
+</script>
+{% endblock %}

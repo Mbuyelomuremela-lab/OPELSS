@@ -1,0 +1,76 @@
+{% extends "base.html" %} {% set is_hq_admin = True %} {% block title %}HQ /
+Admin Dashboard – OPELSS{% endblock %} {% block header_title %}HQ / Admin
+Dashboard{% endblock %} {% block content %}
+<div class="row g-4">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card shadow-sm border-0 rounded-4 p-4">
+      <h6 class="text-uppercase text-muted">Labs</h6>
+      <h2 class="display-6 text-dark">{{ lab_count }}</h2>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card shadow-sm border-0 rounded-4 p-4">
+      <h6 class="text-uppercase text-muted">Provinces</h6>
+      <h2 class="display-6 text-dark">{{ province_count }}</h2>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card shadow-sm border-0 rounded-4 p-4">
+      <h6 class="text-uppercase text-muted">Assets</h6>
+      <h2 class="display-6 text-dark">{{ asset_count }}</h2>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card shadow-sm border-0 rounded-4 p-4">
+      <h6 class="text-uppercase text-muted">Escalated Enquiries</h6>
+      <h2 class="display-6 text-dark">{{ escalated_count }}</h2>
+    </div>
+  </div>
+</div>
+<div class="row g-4 mt-3">
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm border-0 rounded-4 p-4 min-vh-100">
+      <h5 class="mb-4">System Metrics</h5>
+      <ul class="list-group list-group-flush">
+        <li
+          class="list-group-item d-flex justify-content-between align-items-center"
+        >
+          Users<span class="badge bg-success">{{ user_count }}</span>
+        </li>
+        <li
+          class="list-group-item d-flex justify-content-between align-items-center"
+        >
+          Visitors<span class="badge bg-warning text-dark"
+            >{{ visitor_count }}</span
+          >
+        </li>
+        <li
+          class="list-group-item d-flex justify-content-between align-items-center"
+        >
+          Programmes<span class="badge bg-info text-dark"
+            >{{ programme_count }}</span
+          >
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm border-0 rounded-4 p-4 min-vh-100">
+      <h5 class="mb-4">Quick actions</h5>
+      <div class="d-grid gap-3">
+        <a class="btn btn-primary btn-lg" href="{{ url_for('admin.index') }}"
+          >Manage Labs &amp; Users</a
+        >
+        <a class="btn btn-success btn-lg" href="{{ url_for('reports.index') }}"
+          >Export Reports</a
+        >
+        <a
+          class="btn btn-warning btn-lg text-white"
+          href="{{ url_for('announcements.manage') }}"
+          >Manage Announcements</a
+        >
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

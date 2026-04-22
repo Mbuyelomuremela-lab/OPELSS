@@ -1,0 +1,133 @@
+{% extends "base.html" %} {% set show_sidebar = False %}{% set
+not_on_landing_page = False %} {% block title %}Landing – OPELSS{% endblock %}
+{% if not_on_landing_page == False %}{% block login_button %}
+
+<a href="#about_us" class="link-dark text-decoration-none me-4">About Us</a>
+<a href="#announcementCarousel" class="link-dark text-decoration-none me-4"
+  >Announcements</a
+>
+<a href="#contact_us" class="link-dark text-decoration-none me-4">Contact Us</a>
+<a href="{{ url_for('auth.login') }}" class="btn btn-warning btn-lg text-white"
+  >Staff Login</a
+>
+{% endblock %} {% endif %} {% set on_landing_page = True %} {% block content %}
+<div class="container mt-5 ml-5">
+  <div class="row gy-4 align-items-center">
+    <div class="col-lg-6">
+      <h1 class="display-5 text-dark">UNISA: College of education</h1>
+      <p class="lead text-muted">
+        <span
+          ><img
+            src="../static/images/logo.png"
+            alt="oau logo"
+            class="me-2"
+            style="height: 40px; width: auto"
+        /></span>
+        ODEL Acceleration Unit - e-learning lab support
+      </p>
+      <div class="mt-4 d-flex gap-2 flex-wrap">
+        <a href="#track-enquiry" class="btn btn-outline-secondary btn-lg"
+          >Track Enquiry</a
+        >
+      </div>
+    </div>
+  </div>
+
+  <section id="track-enquiry" class="mt-5">
+    <div class="card rounded-4 shadow-sm">
+      <div class="card-body p-4">
+        <h2>Track an Enquiry</h2>
+        {#
+        <form method="post" action="{{ url_for('enquiries.track') }}">
+          {{ form.hidden_tag() }}
+          <div class="row g-3 align-items-end">
+            <div class="col-lg-8">
+              <label class="form-label">Tracking Number</label>
+              {{ form.tracking_number(class_='form-control',
+              placeholder='ENQ-2026-000001') }}
+            </div>
+            <div class="col-lg-4">
+              {{ form.submit(class_='btn btn-success w-100') }}
+            </div>
+          </div>
+        </form>
+        #}
+      </div>
+    </div>
+  </section>
+  <div class="col-12 mt-5">
+    <div
+      id="announcementCarousel"
+      class="carousel slide carousel-fade shadow-sm announcement-carousel"
+      data-bs-ride="carousel"
+    >
+      <div class="carousel-inner">
+        {% for announcement in announcements %}
+        <div class="carousel-item {% if loop.first %}active{% endif %}">
+          <div class="card border-0 rounded-4 shadow">
+            <div class="card-body p-5">
+              {% if announcement.poster_filename %}
+              <img
+                src="{{ url_for('announcements.poster', filename=announcement.poster_filename) }}"
+                alt="Announcement poster"
+                class="img-fluid rounded mb-3"
+                style="max-height: 320px; width: 100%; object-fit: cover"
+              />
+              {% endif %}
+              <h5 class="card-title text-dark">{{ announcement.title }}</h5>
+              <p class="card-text text-muted">{{ announcement.message }}</p>
+              <p class="small text-secondary mb-0">
+                Expires {{ announcement.expiry_date.strftime('%Y-%m-%d') }}
+              </p>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="carousel-item active">
+          <div class="card border-0 rounded-4 shadow">
+            <div class="card-body p-5">
+              <h5 class="card-title">No active announcements</h5>
+              <p class="card-text text-muted">
+                Check back later for system updates and lab alerts.
+              </p>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <button
+        class="carousel-control-prev announcement-carousel-control"
+        type="button"
+        data-bs-target="#announcementCarousel"
+        data-bs-slide="prev"
+        aria-label="Previous announcement"
+      >
+        <span class="carousel-control-prev-icon"></span>
+      </button>
+      <button
+        class="carousel-control-next announcement-carousel-control"
+        type="button"
+        data-bs-target="#announcementCarousel"
+        data-bs-slide="next"
+        aria-label="Next announcement"
+      >
+        <span class="carousel-control-next-icon"></span>
+      </button>
+    </div>
+  </div>
+  <div id="about_us"></div>
+  <div class="col-12 mt-5">
+    <div class="card rounded-4 shadow-sm p-4 mt-4">
+      <h2>About Us</h2>
+      <p class="text-muted">
+        The ODEL Acceleration Unit (OAU) at UNISA is dedicated to providing
+        comprehensive support for e-learning labs across our campuses. Our
+        mission is to ensure that students and staff have access to the
+        resources they need for a seamless online learning experience. We manage
+        lab operations, provide technical assistance, and facilitate the use of
+        digital tools to enhance education delivery.
+      </p>
+    </div>
+  </div>
+  {% endblock %}
+</div>

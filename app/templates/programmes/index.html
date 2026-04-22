@@ -1,0 +1,167 @@
+{% extends "base.html" %} {% block title %}Programmes – OPELSS{% endblock %} {%
+block header_title %}Programme Logging{% endblock %} {% block content %}
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card rounded-4 shadow-sm p-4">
+      <h5>New Programme</h5>
+      <form
+        method="post"
+        action="{{ url_for('programmes.create') }}"
+        data-ajax="true"
+        data-refresh-target="#programmesTableBody"
+      >
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.title.label(class_='form-label') }}{{
+          form.title(class_='form-control') }}
+        </div>
+        <div class="mb-3">
+          {{ form.objective.label(class_='form-label') }}{{
+          form.objective(class_='form-control', rows=3) }}
+        </div>
+        <div class="mb-3">
+          {{ form.target_audience.label(class_='form-label') }}{{
+          form.target_audience(class_='form-control') }}
+        </div>
+        <div class="mb-3">
+          {{ form.attendance_count.label(class_='form-label') }}{{
+          form.attendance_count(class_='form-control') }}
+        </div>
+        <div class="mb-3">
+          {{ form.activities_done.label(class_='form-label') }}{{
+          form.activities_done(class_='form-control', rows=3) }}
+        </div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            {{ form.date.label(class_='form-label') }}{{
+            form.date(class_='form-control') }}
+          </div>
+          <div class="col-md-4">
+            {{ form.start_time.label(class_='form-label') }}{{
+            form.start_time(class_='form-control') }}
+          </div>
+          <div class="col-md-4">
+            {{ form.end_time.label(class_='form-label') }}{{
+            form.end_time(class_='form-control') }}
+          </div>
+        </div>
+        <div class="mb-3 mt-3">
+          {{ form.lab_id.label(class_='form-label') }}{{
+          form.lab_id(class_='form-select') }}
+        </div>
+        {{ form.submit(class_='btn btn-success w-100') }}
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card rounded-4 shadow-sm p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Programme History</h5>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-primary" id="programmeEditBtn" type="button" disabled>Edit</button>
+          <button class="btn btn-outline-danger" id="programmeDeleteBtn" type="button" disabled>Delete</button>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle selectable-table" id="programmesTable">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Date</th>
+              <th>Attendance</th>
+              <th>Lab</th>
+            </tr>
+          </thead>
+          <tbody id="programmesTableBody">
+            {% for programme in programmes %}
+            <tr
+              data-id="{{ programme.id }}"
+              data-title="{{ programme.title }}"
+              data-objective="{{ programme.objective }}"
+              data-target-audience="{{ programme.target_audience }}"
+              data-attendance-count="{{ programme.attendance_count }}"
+              data-activities-done="{{ programme.activities_done }}"
+              data-date="{{ programme.date.strftime('%Y-%m-%d') }}"
+              data-start-time="{{ programme.start_time.strftime('%H:%M:%S') }}"
+              data-end-time="{{ programme.end_time.strftime('%H:%M:%S') }}"
+              data-lab-id="{{ programme.lab_id }}"
+            >
+              <td>{{ programme.title }}</td>
+              <td>{{ programme.date.strftime('%Y-%m-%d') }}</td>
+              <td>{{ programme.attendance_count }}</td>
+              <td>{{ programme.lab.name }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="4" class="text-center text-muted">
+                No programmes logged yet.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="programmeEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+    <form id="programmeEditForm" method="post">
+      <div class="modal-header"><h5 class="modal-title">Edit Programme</h5><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="col-12">{{ form.title(class_='form-control', id='programmeEditTitle') }}</div>
+        <div class="col-12">{{ form.objective(class_='form-control', id='programmeEditObjective', rows=3) }}</div>
+        <div class="col-12">{{ form.target_audience(class_='form-control', id='programmeEditAudience') }}</div>
+        <div class="col-6">{{ form.attendance_count(class_='form-control', id='programmeEditAttendance') }}</div>
+        <div class="col-6">{{ form.lab_id(class_='form-select', id='programmeEditLab') }}</div>
+        <div class="col-12">{{ form.activities_done(class_='form-control', id='programmeEditActivities', rows=3) }}</div>
+        <div class="col-4">{{ form.date(class_='form-control', id='programmeEditDate') }}</div>
+        <div class="col-4">{{ form.start_time(class_='form-control', id='programmeEditStart') }}</div>
+        <div class="col-4">{{ form.end_time(class_='form-control', id='programmeEditEnd') }}</div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Save</button></div>
+    </form>
+  </div></div>
+</div>
+<form id="programmeDeleteForm" method="post" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /></form>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const table = document.getElementById("programmesTable");
+    const editBtn = document.getElementById("programmeEditBtn");
+    const deleteBtn = document.getElementById("programmeDeleteBtn");
+    let selected = null;
+    table?.addEventListener("click", (event) => {
+      const row = event.target.closest("tr[data-id]");
+      if (!row || !table.contains(row)) return;
+      table.querySelectorAll("tbody tr").forEach((r) => r.classList.remove("table-row-selected"));
+      row.classList.add("table-row-selected");
+      selected = row;
+      editBtn.disabled = false;
+      deleteBtn.disabled = false;
+    });
+    editBtn?.addEventListener("click", () => {
+      if (!selected) return;
+      document.getElementById("programmeEditTitle").value = selected.dataset.title;
+      document.getElementById("programmeEditObjective").value = selected.dataset.objective;
+      document.getElementById("programmeEditAudience").value = selected.dataset.targetAudience;
+      document.getElementById("programmeEditAttendance").value = selected.dataset.attendanceCount;
+      document.getElementById("programmeEditActivities").value = selected.dataset.activitiesDone;
+      document.getElementById("programmeEditDate").value = selected.dataset.date;
+      document.getElementById("programmeEditStart").value = selected.dataset.startTime;
+      document.getElementById("programmeEditEnd").value = selected.dataset.endTime;
+      document.getElementById("programmeEditLab").value = selected.dataset.labId;
+      document.getElementById("programmeEditForm").action = `/programmes/${selected.dataset.id}/update`;
+      new bootstrap.Modal(document.getElementById("programmeEditModal")).show();
+    });
+    deleteBtn?.addEventListener("click", () => {
+      if (!selected || !confirm(`Delete programme "${selected.dataset.title}"?`)) return;
+      const form = document.getElementById("programmeDeleteForm");
+      form.action = `/programmes/${selected.dataset.id}/delete`;
+      form.submit();
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %} {% set is_trainee = True %} {% block title
+%}Attendance – OPELSS{% endblock %} {% block header_title %}Attendance Clock In
+/ Out{% endblock %} {% block content %}
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <div class="card rounded-4 shadow-sm p-4">
+      <h5>Clock In</h5>
+      <form
+        action="{{ url_for('attendance.clock_in') }}"
+        method="post"
+        id="clockInForm"
+      >
+        {{ clock_in_form.hidden_tag() }}
+        <button type="submit" class="btn btn-success w-100">
+          Clock In Now
+        </button>
+      </form>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card rounded-4 shadow-sm p-4">
+      <h5>Clock Out</h5>
+      <form
+        action="{{ url_for('attendance.clock_out') }}"
+        method="post"
+        id="clockOutForm"
+      >
+        {{ clock_out_form.hidden_tag() }}
+        <div class="mb-3">
+          {{ clock_out_form.early_departure_reason.label(class_='form-label') }}
+          {{ clock_out_form.early_departure_reason(class_='form-control',
+          placeholder='Reason if leaving before 16:00') }}
+        </div>
+        <button type="submit" class="btn btn-warning w-100">Clock Out</button>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card rounded-4 shadow-sm p-4">
+      <h5>Recent Attendance</h5>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>In</th>
+              <th>Out</th>
+              <th>Early Departure</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+            <tr>
+              <td>{{ log.date.strftime('%Y-%m-%d') }}</td>
+              <td>
+                {{ log.clock_in_time.strftime('%H:%M') if log.clock_in_time else
+                '-' }}
+              </td>
+              <td>
+                {{ log.clock_out_time.strftime('%H:%M') if log.clock_out_time
+                else '-' }}
+              </td>
+              <td>{{ log.early_departure_reason or '-' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="4" class="text-center text-muted">
+                No attendance records available.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-3">
+        <a
+          href="{{ url_for('attendance.export_timesheet') }}"
+          class="btn btn-primary"
+          >Export Timesheet PDF</a
+        >
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    fillGeolocation("clockInForm");
+    fillGeolocation("clockOutForm");
+  });
+</script>
+{% endblock %}

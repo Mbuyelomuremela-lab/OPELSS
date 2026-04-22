@@ -1,0 +1,148 @@
+:root {
+  --dark-blue: #0d3b66;
+  --orange: #f4a261;
+  --green: #2a9d8f;
+  --white: #ffffff;
+  --light-gray: #f4f7f6;
+}
+
+body {
+  background-color: var(--light-gray);
+  color: #2b2b2b; /* Good choice: dark enough for reading, softer than pure black */
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+}
+
+.sidebar {
+  width: 240px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  min-height: 100vh;
+  z-index: 1000;
+  transition: all 0.25s ease;
+}
+
+.main-content {
+  margin-left: 240px;
+  transition: all 0.25s ease;
+}
+
+.sidebar.active {
+  transform: translateX(-260px);
+}
+
+.sidebar .nav-link {
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: 0.75rem;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.card {
+  background-color: #ffffff;
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* Very subtle shadow */
+}
+
+.btn-primary {
+  background-color: var(--dark-blue);
+  border-color: var(--dark-blue);
+}
+
+.btn-primary:hover {
+  background-color: #0a3160;
+  border-color: #0a3160;
+}
+
+.btn-warning {
+  background-color: var(--orange);
+  border-color: var(--orange);
+}
+
+.btn-warning:hover {
+  background-color: #de8d4f;
+  border-color: #de8d4f;
+}
+
+.btn-success {
+  background-color: var(--green);
+  border-color: var(--green);
+}
+
+.btn-success:hover {
+  background-color: #24836f;
+  border-color: #24836f;
+}
+
+.table thead th {
+  background-color: #f5f7fb;
+}
+
+.navbar {
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+.announcement-carousel .card-body {
+  min-height: 260px;
+}
+
+.announcement-carousel-control {
+  width: 44px;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  opacity: 1;
+}
+
+.announcement-carousel .carousel-control-prev {
+  left: -56px;
+}
+
+.announcement-carousel .carousel-control-next {
+  right: -56px;
+}
+
+.announcement-carousel-control .carousel-control-prev-icon,
+.announcement-carousel-control .carousel-control-next-icon {
+  background-color: rgba(13, 59, 102, 0.85);
+  border-radius: 50%;
+  padding: 1.1rem;
+  background-size: 60% 60%;
+}
+
+.selectable-table tbody tr {
+  cursor: pointer;
+}
+
+.selectable-table tbody tr.table-row-selected {
+  background-color: rgba(13, 59, 102, 0.12);
+}
+
+@media (max-width: 991px) {
+  .sidebar {
+    position: fixed;
+    z-index: 1030;
+    transform: translateX(-260px);
+  }
+
+  .sidebar.active {
+    transform: translateX(0);
+  }
+
+  .announcement-carousel .card-body {
+    min-height: 220px;
+  }
+
+  .announcement-carousel .carousel-control-prev {
+    left: 8px;
+  }
+
+  .announcement-carousel .carousel-control-next {
+    right: 8px;
+  }
+}

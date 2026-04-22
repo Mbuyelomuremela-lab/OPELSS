@@ -1,0 +1,54 @@
+{% extends "base.html" %} {% set is_hq_admin = True %} {% block title %}Reports
+– OPELSS{% endblock %} {% block header_title %}Report Export Center{% endblock
+%} {% block content %}
+<div class="card rounded-4 shadow-sm p-4">
+  <h5>Export Reports</h5>
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label">Report Type</label>
+      <select class="form-select" name="report_type" id="reportType">
+        <option value="attendance">Attendance</option>
+        <option value="assets">Assets</option>
+        <option value="visitors">Visitors</option>
+        <option value="programmes">Programmes</option>
+        <option value="labs">Labs</option>
+        <option value="provinces">Provinces</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Province</label>
+      <select class="form-select" name="province_id">
+        <option value="">All Provinces</option>
+        {% for province in provinces %}
+        <option value="{{ province.id }}">{{ province.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Lab</label>
+      <select class="form-select" name="lab_id">
+        <option value="">All Labs</option>
+        {% for lab in labs %}
+        <option value="{{ lab.id }}">{{ lab.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100">Prepare</button>
+    </div>
+  </form>
+  <div class="mt-4">
+    <div class="alert alert-info">
+      Choose a report type and filters, then click Export when the form loads.
+    </div>
+    <div id="reportLinkPlaceholder"></div>
+  </div>
+</div>
+<script>
+  document.getElementById("reportType").addEventListener("change", function () {
+    const form = this.closest("form");
+    form.action = `/reports/export/${this.value}`;
+  });
+  document.querySelector("form").dispatchEvent(new Event("change"));
+</script>
+{% endblock %}

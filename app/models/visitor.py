@@ -1,0 +1,18 @@
+from datetime import date
+from app.extensions import db
+
+
+class Visitor(db.Model):
+    __tablename__ = "visitors"
+
+    id = db.Column(db.Integer, primary_key=True)
+    visitor_name = db.Column(db.String(120), nullable=False)
+    category = db.Column(db.String(100), nullable=False)
+    purpose = db.Column(db.Text, nullable=False)
+    visit_date = db.Column(db.Date, nullable=False, default=date.today)
+    lab_id = db.Column(db.Integer, db.ForeignKey("labs.id"), nullable=False)
+
+    lab = db.relationship("Lab", back_populates="visitors")
+
+    def __repr__(self):
+        return f"<Visitor {self.visitor_name} on {self.visit_date}>"

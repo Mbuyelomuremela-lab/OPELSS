@@ -1,0 +1,72 @@
+{% extends "base.html" %} {% set is_trainee = True %} {% block title %}Lab
+Trainee Dashboard – OPELSS{% endblock %} {% block header_title %}Lab Trainee
+Dashboard{% endblock %} {% block content %}
+<div class="row g-4">
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="card shadow-sm rounded-4 border-0 p-4">
+      <span class="text-uppercase small text-muted">Assigned Lab</span>
+      <h5 class="mt-2">{{ lab.name }}</h5>
+      <p class="mb-0 text-secondary">{{ lab.province.name }}</p>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="card shadow-sm rounded-4 border-0 p-4">
+      <span class="text-uppercase small text-muted">Attendance This Month</span>
+      <h2 class="display-6 mt-2">{{ monthly_attendance }}</h2>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="card shadow-sm rounded-4 border-0 p-4">
+      <span class="text-uppercase small text-muted">Assets</span>
+      <h2 class="display-6 mt-2">{{ assets_count }}</h2>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="card shadow-sm rounded-4 border-0 p-4">
+      <span class="text-uppercase small text-muted">Visitors</span>
+      <h2 class="display-6 mt-2">{{ visitors_count }}</h2>
+    </div>
+  </div>
+</div>
+<div class="row g-4 mt-3">
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm rounded-4 border-0 p-4 h-100">
+      <h5>Workload Summary</h5>
+      <ul class="list-group list-group-flush mt-3">
+        <li
+          class="list-group-item d-flex justify-content-between align-items-center"
+        >
+          Enquiries<span class="badge bg-info text-dark"
+            >{{ enquiries_count }}</span
+          >
+        </li>
+        <li
+          class="list-group-item d-flex justify-content-between align-items-center"
+        >
+          Programmes<span class="badge bg-success">{{ programmes_count }}</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm rounded-4 border-0 p-4 h-100">
+      <h5>Quick Actions</h5>
+      <div class="d-grid gap-3 mt-3">
+        <a
+          class="btn btn-warning btn-lg text-white"
+          href="{{ url_for('attendance.overview') }}"
+          >Clock In / Clock Out</a
+        >
+        <a class="btn btn-primary btn-lg" href="{{ url_for('assets.index') }}"
+          >Manage Assets</a
+        >
+        <a
+          class="btn btn-success btn-lg"
+          href="{{ url_for('programmes.index') }}"
+          >Log Programme</a
+        >
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
