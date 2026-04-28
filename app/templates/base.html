@@ -259,5 +259,33 @@
         }
       });
     </script>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-container">
+        <div class="spinner-circle"></div>
+        <div class="loading-text">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div class="password-modal-overlay" id="passwordModal">
+      <div class="password-modal-content">
+        <h5>User Created Successfully!</h5>
+        <p class="text-muted mb-3">
+          Here is the temporary password for the new user. Please share it with
+          them securely.
+        </p>
+        <div class="password-display">
+          <code id="passwordDisplay"></code>
+        </div>
+        <div class="password-actions">
+          <button class="btn btn-primary" id="copyPasswordBtn">
+            <i class="fas fa-copy me-2"></i>Copy Password
+          </button>
+          <button class="btn btn-secondary" id="closePasswordBtn">Close</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

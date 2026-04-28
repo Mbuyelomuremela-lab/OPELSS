@@ -44,11 +44,88 @@ function insertHtml(selector, html) {
   }
 }
 
+// ============ Loading Overlay Functions ============
+function showLoadingOverlay() {
+  const overlay = document.getElementById("loadingOverlay");
+  if (overlay) {
+    overlay.classList.add("show");
+  }
+}
+
+function hideLoadingOverlay() {
+  const overlay = document.getElementById("loadingOverlay");
+  if (overlay) {
+    overlay.classList.remove("show");
+  }
+}
+
+// ============ Password Modal Functions ============
+function showPasswordModal(password) {
+  const modal = document.getElementById("passwordModal");
+  const passwordDisplay = document.getElementById("passwordDisplay");
+  if (modal && passwordDisplay) {
+    passwordDisplay.textContent = password;
+    modal.classList.add("show");
+  }
+}
+
+function hidePasswordModal() {
+  const modal = document.getElementById("passwordModal");
+  if (modal) {
+    modal.classList.remove("show");
+  }
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      const btn = document.getElementById("copyPasswordBtn");
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check me-2"></i>Copied!';
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+      }, 2000);
+    })
+    .catch(() => {
+      showToast("Failed to copy password. Please copy manually.", "warning");
+    });
+}
+
+// ============ Setup Password Modal Event Listeners ============
+function setupPasswordModalListeners() {
+  const copyBtn = document.getElementById("copyPasswordBtn");
+  const closeBtn = document.getElementById("closePasswordBtn");
+
+  if (copyBtn) {
+    copyBtn.addEventListener("click", () => {
+      const passwordDisplay = document.getElementById("passwordDisplay");
+      if (passwordDisplay) {
+        copyToClipboard(passwordDisplay.textContent);
+      }
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", hidePasswordModal);
+  }
+}
+
 async function submitAjaxForm(event) {
   event.preventDefault();
   const form = event.target;
   const action = form.action;
   const method = form.method.toUpperCase() || "POST";
+  const submitButton = form.querySelector('button[type="submit"]');
+
+  // Show loading overlay and disable button
+  showLoadingOverlay();
+  if (submitButton) {
+    submitButton.disabled = true;
+  }
+
   const formData = new FormData(form);
   const payload = {};
   formData.forEach((value, key) => {
@@ -61,15 +138,38 @@ async function submitAjaxForm(event) {
       headers: {
         "Content-Type": "application/json",
         "X-CSRFToken": getCsrfToken(),
+        "X-Requested-With": "XMLHttpRequest",
       },
       credentials: "same-origin",
       body: JSON.stringify(payload),
     });
     const result = await response.json();
+
+    // Hide loading overlay
+    hideLoadingOverlay();
+
     if (!response.ok || result.success === false) {
-      showToast(result.message || "Unable to complete the request.", "danger");
+      showToast(
+        result.error || result.message || "Unable to complete the request.",
+        "danger",
+      );
+      if (submitButton) {
+        submitButton.disabled = false;
+      }
       return;
     }
+
+    // Check if password should be shown in modal
+    if (result.temporary_password) {
+      showPasswordModal(result.temporary_password);
+      // Reset form after showing password modal
+      if (typeof form.reset === "function") {
+        form.reset();
+      }
+      return;
+    }
+
+    // Show success toast
     showToast(result.message || "Saved successfully.", "success");
 
     const refreshTarget = form.dataset.refreshTarget || result.refreshTarget;
@@ -86,20 +186,40 @@ async function submitAjaxForm(event) {
       return;
     }
 
-    if (result.reload !== false) {
-      window.location.reload();
+    // Reset form and re-enable button
+    if (typeof form.reset === "function") {
+      form.reset();
+    }
+    if (submitButton) {
+      submitButton.disabled = false;
+    }
+
+    if (result.reload !== false && result.temporary_password === undefined) {
+      // Only reload if we're not showing password modal
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     }
   } catch (error) {
     console.error(error);
+    hideLoadingOverlay();
     showToast("Unable to complete the request. Please try again.", "danger");
+    if (submitButton) {
+      submitButton.disabled = false;
+    }
   }
 }
 
 function bindAjaxForms() {
-  const ajaxForms = document.querySelectorAll('form[data-ajax="true"]');
+  const ajaxForms = document.querySelectorAll(
+    'form[data-ajax="true"], form.ajax-form',
+  );
   ajaxForms.forEach((form) => {
     form.addEventListener("submit", submitAjaxForm);
   });
+
+  // Setup password modal listeners
+  setupPasswordModalListeners();
 }
 
 window.addEventListener("DOMContentLoaded", () => {

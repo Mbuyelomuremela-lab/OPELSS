@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required
 from app.admin import admin_bp
 from app.admin.forms import ProvinceForm, LabForm, UserForm
@@ -48,11 +48,20 @@ def index():
 @role_required("Admin")
 def add_province():
     form = ProvinceForm()
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    
     if form.validate_on_submit():
         create_province(form.name.data)
-        flash("Province added successfully.", "success")
+        message = "Province added successfully."
+        if is_ajax:
+            return jsonify({"success": True, "message": message})
+        flash(message, "success")
     else:
-        flash("Unable to add province. Check the values and try again.", "danger")
+        message = "Unable to add province. Check the values and try again."
+        if is_ajax:
+            return jsonify({"success": False, "error": message}), 400
+        flash(message, "danger")
+    
     return redirect(url_for("admin.index"))
 
 
@@ -62,6 +71,8 @@ def add_province():
 def add_lab():
     form = LabForm()
     form.province_id.choices = [(p.id, p.name) for p in Province.query.order_by(Province.name).all()]
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    
     if form.validate_on_submit():
         create_lab(
             name=form.name.data,
@@ -70,9 +81,16 @@ def add_lab():
             longitude=form.longitude.data,
             radius_meters=form.radius_meters.data,
         )
-        flash("Lab created successfully.", "success")
+        message = "Lab created successfully."
+        if is_ajax:
+            return jsonify({"success": True, "message": message})
+        flash(message, "success")
     else:
-        flash("Unable to create lab. Please check the values.", "danger")
+        message = "Unable to create lab. Please check the values."
+        if is_ajax:
+            return jsonify({"success": False, "error": message}), 400
+        flash(message, "danger")
+    
     return redirect(url_for("admin.index"))
 
 
@@ -84,15 +102,25 @@ def add_user():
     form.assigned_lab_id.choices = [(0, "Unassigned")] + [
         (l.id, f"{l.name} ({l.province.name})") for l in Lab.query.order_by(Lab.name).all()
     ]
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    
     if form.validate_on_submit():
         staff_number = (form.staff_number.data or "").strip() or None
         if staff_number and User.query.filter_by(staff_number=staff_number).first():
-            flash("Another user already uses this staff number.", "danger")
+            error = "Another user already uses this staff number."
+            if is_ajax:
+                return jsonify({"success": False, "error": error}), 400
+            flash(error, "danger")
             return redirect(url_for("admin.index"))
+        
         assigned_lab = form.assigned_lab_id.data or None
         if form.role.data == "Lab Trainee" and not assigned_lab:
-            flash("Lab Trainee users must be assigned to a lab.", "danger")
+            error = "Lab Trainee users must be assigned to a lab."
+            if is_ajax:
+                return jsonify({"success": False, "error": error}), 400
+            flash(error, "danger")
             return redirect(url_for("admin.index"))
+        
         user, password = create_user(
             full_name=form.full_name.data,
             email=form.email.data,
@@ -101,9 +129,21 @@ def add_user():
             active=form.active.data,
             staff_number=staff_number,
         )
+        
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "message": "User created successfully.",
+                "temporary_password": password
+            })
+        
         flash(f"User created. Temporary password: {password}", "success")
     else:
-        flash("Unable to create user. Please check the provided details.", "danger")
+        error = "Unable to create user. Please check the provided details."
+        if is_ajax:
+            return jsonify({"success": False, "error": error}), 400
+        flash(error, "danger")
+    
     return redirect(url_for("admin.index"))
 
 
@@ -248,5 +288,16 @@ def remove_user(user_id):
 def reset_password(user_id):
     user = User.query.get_or_404(user_id)
     password = reset_user_password(user)
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    
+    message = f"Password reset successfully for {user.full_name}."
+    
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "message": message,
+            "temporary_password": password
+        })
+    
     flash(f"Password reset successfully. Temporary password for {user.full_name}: {password}", "success")
     return redirect(url_for("admin.index"))

@@ -1,45 +1,91 @@
-{% extends "base.html" %} {% block title %}Admin Console – OPELSS{% endblock %} {%
-block header_title %}Admin Console{% endblock %} {% block content %}
+{% extends "base.html" %} {% block title %}Admin Console – OPELSS{% endblock %}
+{% block header_title %}Admin Console{% endblock %} {% block content %}
 <div class="row g-4">
   <div class="col-lg-4">
     <div class="card rounded-4 shadow-sm p-4 h-100">
       <h5 class="mb-3">Add Province</h5>
-      <form action="{{ url_for('admin.add_province') }}" method="post" class="row g-3 align-items-end">
+      <form
+        action="{{ url_for('admin.add_province') }}"
+        method="post"
+        class="row g-3 align-items-end ajax-form"
+      >
         {{ province_form.hidden_tag() }}
-        <div class="col-12">{{ province_form.name(class_='form-control', placeholder='Province Name') }}</div>
-        <div class="col-12">{{ province_form.submit(class_='btn btn-primary w-100') }}</div>
+        <div class="col-12">
+          {{ province_form.name(class_='form-control', placeholder='Province
+          Name') }}
+        </div>
+        <div class="col-12">
+          {{ province_form.submit(class_='btn btn-primary w-100') }}
+        </div>
       </form>
     </div>
   </div>
   <div class="col-lg-4">
     <div class="card rounded-4 shadow-sm p-4 h-100">
       <h5 class="mb-3">Add Lab</h5>
-      <form action="{{ url_for('admin.add_lab') }}" method="post" class="row g-3">
+      <form
+        action="{{ url_for('admin.add_lab') }}"
+        method="post"
+        class="row g-3 ajax-form"
+      >
         {{ lab_form.hidden_tag() }}
-        <div class="col-12">{{ lab_form.name(class_='form-control', placeholder='Lab Name') }}</div>
-        <div class="col-12">{{ lab_form.province_id(class_='form-select') }}</div>
-        <div class="col-6">{{ lab_form.latitude(class_='form-control', placeholder='Latitude') }}</div>
-        <div class="col-6">{{ lab_form.longitude(class_='form-control', placeholder='Longitude') }}</div>
-        <div class="col-12">{{ lab_form.radius_meters(class_='form-control', placeholder='Radius (meters)') }}</div>
-        <div class="col-12">{{ lab_form.submit(class_='btn btn-success w-100') }}</div>
+        <div class="col-12">
+          {{ lab_form.name(class_='form-control', placeholder='Lab Name') }}
+        </div>
+        <div class="col-12">
+          {{ lab_form.province_id(class_='form-select') }}
+        </div>
+        <div class="col-6">
+          {{ lab_form.latitude(class_='form-control', placeholder='Latitude') }}
+        </div>
+        <div class="col-6">
+          {{ lab_form.longitude(class_='form-control', placeholder='Longitude')
+          }}
+        </div>
+        <div class="col-12">
+          {{ lab_form.radius_meters(class_='form-control', placeholder='Radius
+          (meters)') }}
+        </div>
+        <div class="col-12">
+          {{ lab_form.submit(class_='btn btn-success w-100') }}
+        </div>
       </form>
     </div>
   </div>
   <div class="col-lg-4">
     <div class="card rounded-4 shadow-sm p-4 h-100">
       <h5 class="mb-3">Add User</h5>
-      <form action="{{ url_for('admin.add_user') }}" method="post" class="row g-3">
+      <form
+        action="{{ url_for('admin.add_user') }}"
+        method="post"
+        class="row g-3 ajax-form"
+      >
         {{ user_form.hidden_tag() }}
-        <div class="col-12">{{ user_form.full_name(class_='form-control', placeholder='Full Name') }}</div>
-        <div class="col-12">{{ user_form.staff_number(class_='form-control', placeholder='Staff Number (8 digits)') }}</div>
-        <div class="col-12">{{ user_form.email(class_='form-control', placeholder='Email Address') }}</div>
+        <div class="col-12">
+          {{ user_form.full_name(class_='form-control', placeholder='Full Name')
+          }}
+        </div>
+        <div class="col-12">
+          {{ user_form.staff_number(class_='form-control', placeholder='Staff
+          Number (8 digits)') }}
+        </div>
+        <div class="col-12">
+          {{ user_form.email(class_='form-control', placeholder='Email Address')
+          }}
+        </div>
         <div class="col-12">{{ user_form.role(class_='form-select') }}</div>
-        <div class="col-12">{{ user_form.assigned_lab_id(class_='form-select') }}</div>
+        <div class="col-12">
+          {{ user_form.assigned_lab_id(class_='form-select') }}
+        </div>
         <div class="col-12 form-check ms-1">
           {{ user_form.active(class_='form-check-input') }}
-          <label class="form-check-label" for="{{ user_form.active.id }}">Active</label>
+          <label class="form-check-label" for="{{ user_form.active.id }}"
+            >Active</label
+          >
         </div>
-        <div class="col-12">{{ user_form.submit(class_='btn btn-warning w-100 text-white') }}</div>
+        <div class="col-12">
+          {{ user_form.submit(class_='btn btn-warning w-100 text-white') }}
+        </div>
       </form>
     </div>
   </div>
@@ -49,20 +95,40 @@ block header_title %}Admin Console{% endblock %} {% block content %}
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0">Provinces</h5>
     <div class="d-flex gap-2">
-      <button class="btn btn-outline-primary" id="provinceEditBtn" type="button" disabled>Edit</button>
-      <button class="btn btn-outline-danger" id="provinceDeleteBtn" type="button" disabled>Delete</button>
+      <button
+        class="btn btn-outline-primary"
+        id="provinceEditBtn"
+        type="button"
+        disabled
+      >
+        Edit
+      </button>
+      <button
+        class="btn btn-outline-danger"
+        id="provinceDeleteBtn"
+        type="button"
+        disabled
+      >
+        Delete
+      </button>
     </div>
   </div>
   <div class="table-responsive">
     <table class="table table-hover selectable-table" id="provincesTable">
-      <thead><tr><th>Name</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Name</th>
+        </tr>
+      </thead>
       <tbody>
         {% for province in provinces %}
         <tr data-id="{{ province.id }}" data-name="{{ province.name }}">
           <td>{{ province.name }}</td>
         </tr>
         {% else %}
-        <tr><td class="text-muted">No provinces added yet.</td></tr>
+        <tr>
+          <td class="text-muted">No provinces added yet.</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -73,15 +139,42 @@ block header_title %}Admin Console{% endblock %} {% block content %}
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0">Labs</h5>
     <div class="d-flex gap-2">
-      <button class="btn btn-outline-primary" id="labEditBtn" type="button" disabled>Edit</button>
-      <button class="btn btn-outline-danger" id="labDeleteBtn" type="button" disabled>Delete</button>
-      <button class="btn btn-outline-secondary" id="labMapBtn" type="button" disabled>View on Map</button>
+      <button
+        class="btn btn-outline-primary"
+        id="labEditBtn"
+        type="button"
+        disabled
+      >
+        Edit
+      </button>
+      <button
+        class="btn btn-outline-danger"
+        id="labDeleteBtn"
+        type="button"
+        disabled
+      >
+        Delete
+      </button>
+      <button
+        class="btn btn-outline-secondary"
+        id="labMapBtn"
+        type="button"
+        disabled
+      >
+        View on Map
+      </button>
     </div>
   </div>
   <div class="table-responsive">
     <table class="table table-hover selectable-table" id="labsTable">
       <thead>
-        <tr><th>Name</th><th>Province</th><th>Latitude</th><th>Longitude</th><th>Radius (m)</th></tr>
+        <tr>
+          <th>Name</th>
+          <th>Province</th>
+          <th>Latitude</th>
+          <th>Longitude</th>
+          <th>Radius (m)</th>
+        </tr>
       </thead>
       <tbody>
         {% for lab in labs %}
@@ -100,7 +193,9 @@ block header_title %}Admin Console{% endblock %} {% block content %}
           <td>{{ lab.radius_meters }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="5" class="text-muted">No labs added yet.</td></tr>
+        <tr>
+          <td colspan="5" class="text-muted">No labs added yet.</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -111,15 +206,43 @@ block header_title %}Admin Console{% endblock %} {% block content %}
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0">Users</h5>
     <div class="d-flex gap-2">
-      <button class="btn btn-outline-primary" id="userEditBtn" type="button" disabled>Edit</button>
-      <button class="btn btn-outline-warning" id="userResetBtn" type="button" disabled>Reset Password</button>
-      <button class="btn btn-outline-danger" id="userDeleteBtn" type="button" disabled>Delete</button>
+      <button
+        class="btn btn-outline-primary"
+        id="userEditBtn"
+        type="button"
+        disabled
+      >
+        Edit
+      </button>
+      <button
+        class="btn btn-outline-warning"
+        id="userResetBtn"
+        type="button"
+        disabled
+      >
+        Reset Password
+      </button>
+      <button
+        class="btn btn-outline-danger"
+        id="userDeleteBtn"
+        type="button"
+        disabled
+      >
+        Delete
+      </button>
     </div>
   </div>
   <div class="table-responsive">
     <table class="table table-hover selectable-table" id="usersTable">
       <thead>
-        <tr><th>Name</th><th>Staff #</th><th>Email</th><th>Role</th><th>Lab</th><th>Status</th></tr>
+        <tr>
+          <th>Name</th>
+          <th>Staff #</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Lab</th>
+          <th>Status</th>
+        </tr>
       </thead>
       <tbody>
         {% for user in users %}
@@ -136,11 +259,17 @@ block header_title %}Admin Console{% endblock %} {% block content %}
           <td>{{ user.staff_number or '-' }}</td>
           <td>{{ user.email }}</td>
           <td>{{ user.role }}</td>
-          <td>{{ user.assigned_lab.name if user.assigned_lab else 'Unassigned' }}</td>
+          <td>
+            {{ user.assigned_lab.name if user.assigned_lab else 'Unassigned' }}
+          </td>
           <td>{{ 'Active' if user.active else 'Inactive' }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="6" class="text-center text-muted">No users available.</td></tr>
+        <tr>
+          <td colspan="6" class="text-center text-muted">
+            No users available.
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -148,79 +277,198 @@ block header_title %}Admin Console{% endblock %} {% block content %}
 </div>
 
 <div class="modal fade" id="provinceEditModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-    <form id="provinceEditForm" method="post">
-      <div class="modal-header"><h5 class="modal-title">Edit Province</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <input type="text" class="form-control" name="name" id="provinceEditName" required />
-      </div>
-      <div class="modal-footer"><button class="btn btn-primary" type="submit">Save</button></div>
-    </form>
-  </div></div>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="provinceEditForm" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Province</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input
+            type="text"
+            class="form-control"
+            name="name"
+            id="provinceEditName"
+            required
+          />
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="labEditModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-    <form id="labEditForm" method="post">
-      <div class="modal-header"><h5 class="modal-title">Edit Lab</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body row g-3">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="col-12"><input type="text" class="form-control" name="name" id="labEditName" required /></div>
-        <div class="col-12">
-          <select class="form-select" name="province_id" id="labEditProvince" required>
-            {% for province in provinces %}
-            <option value="{{ province.id }}">{{ province.name }}</option>
-            {% endfor %}
-          </select>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="labEditForm" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Lab</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
         </div>
-        <div class="col-6"><input type="number" step="any" class="form-control" name="latitude" id="labEditLatitude" required /></div>
-        <div class="col-6"><input type="number" step="any" class="form-control" name="longitude" id="labEditLongitude" required /></div>
-        <div class="col-12"><input type="number" step="any" min="1" class="form-control" name="radius_meters" id="labEditRadius" required /></div>
-      </div>
-      <div class="modal-footer"><button class="btn btn-primary" type="submit">Save</button></div>
-    </form>
-  </div></div>
+        <div class="modal-body row g-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="col-12">
+            <input
+              type="text"
+              class="form-control"
+              name="name"
+              id="labEditName"
+              required
+            />
+          </div>
+          <div class="col-12">
+            <select
+              class="form-select"
+              name="province_id"
+              id="labEditProvince"
+              required
+            >
+              {% for province in provinces %}
+              <option value="{{ province.id }}">{{ province.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <input
+              type="number"
+              step="any"
+              class="form-control"
+              name="latitude"
+              id="labEditLatitude"
+              required
+            />
+          </div>
+          <div class="col-6">
+            <input
+              type="number"
+              step="any"
+              class="form-control"
+              name="longitude"
+              id="labEditLongitude"
+              required
+            />
+          </div>
+          <div class="col-12">
+            <input
+              type="number"
+              step="any"
+              min="1"
+              class="form-control"
+              name="radius_meters"
+              id="labEditRadius"
+              required
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="userEditModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-    <form id="userEditForm" method="post">
-      <div class="modal-header"><h5 class="modal-title">Edit User</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body row g-3">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="col-12"><input type="text" class="form-control" name="full_name" id="userEditName" required /></div>
-        <div class="col-12"><input type="text" class="form-control" name="staff_number" id="userEditStaffNumber" placeholder="Staff Number (8 digits)" /></div>
-        <div class="col-12"><input type="email" class="form-control" name="email" id="userEditEmail" required /></div>
-        <div class="col-12">
-          <select class="form-select" name="role" id="userEditRole" required>
-            <option value="Admin">Admin</option>
-            <option value="HQ Trainee">HQ Trainee</option>
-            <option value="Lab Trainee">Lab Trainee</option>
-          </select>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="userEditForm" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit User</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
         </div>
-        <div class="col-12">
-          <select class="form-select" name="assigned_lab_id" id="userEditLab">
-            <option value="0">Unassigned</option>
-            {% for lab in labs %}
-            <option value="{{ lab.id }}">{{ lab.name }} ({{ lab.province.name }})</option>
-            {% endfor %}
-          </select>
+        <div class="modal-body row g-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="col-12">
+            <input
+              type="text"
+              class="form-control"
+              name="full_name"
+              id="userEditName"
+              required
+            />
+          </div>
+          <div class="col-12">
+            <input
+              type="text"
+              class="form-control"
+              name="staff_number"
+              id="userEditStaffNumber"
+              placeholder="Staff Number (8 digits)"
+            />
+          </div>
+          <div class="col-12">
+            <input
+              type="email"
+              class="form-control"
+              name="email"
+              id="userEditEmail"
+              required
+            />
+          </div>
+          <div class="col-12">
+            <select class="form-select" name="role" id="userEditRole" required>
+              <option value="Admin">Admin</option>
+              <option value="HQ Trainee">HQ Trainee</option>
+              <option value="Lab Trainee">Lab Trainee</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <select class="form-select" name="assigned_lab_id" id="userEditLab">
+              <option value="0">Unassigned</option>
+              {% for lab in labs %}
+              <option value="{{ lab.id }}">
+                {{ lab.name }} ({{ lab.province.name }})
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 form-check ms-1">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              name="active"
+              id="userEditActive"
+            />
+            <label class="form-check-label" for="userEditActive">Active</label>
+          </div>
         </div>
-        <div class="col-12 form-check ms-1">
-          <input type="checkbox" class="form-check-input" name="active" id="userEditActive" />
-          <label class="form-check-label" for="userEditActive">Active</label>
+        <div class="modal-footer">
+          <button class="btn btn-primary" type="submit">Save</button>
         </div>
-      </div>
-      <div class="modal-footer"><button class="btn btn-primary" type="submit">Save</button></div>
-    </form>
-  </div></div>
+      </form>
+    </div>
+  </div>
 </div>
 
-<form id="provinceDeleteForm" method="post" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /></form>
-<form id="labDeleteForm" method="post" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /></form>
-<form id="userDeleteForm" method="post" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /></form>
-<form id="userResetForm" method="post" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /></form>
+<form id="provinceDeleteForm" method="post" class="d-none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+</form>
+<form id="labDeleteForm" method="post" class="d-none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+</form>
+<form id="userDeleteForm" method="post" class="d-none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+</form>
+<form id="userResetForm" method="post" class="d-none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+</form>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
@@ -231,7 +479,9 @@ block header_title %}Admin Console{% endblock %} {% block content %}
       table.addEventListener("click", (event) => {
         const row = event.target.closest("tr[data-id]");
         if (!row || !table.contains(row)) return;
-        table.querySelectorAll("tbody tr").forEach((r) => r.classList.remove("table-row-selected"));
+        table
+          .querySelectorAll("tbody tr")
+          .forEach((r) => r.classList.remove("table-row-selected"));
         row.classList.add("table-row-selected");
         selectedRow = row;
         buttons.forEach((btn) => btn && (btn.disabled = false));
@@ -241,17 +491,22 @@ block header_title %}Admin Console{% endblock %} {% block content %}
 
     const provinceEditBtn = document.getElementById("provinceEditBtn");
     const provinceDeleteBtn = document.getElementById("provinceDeleteBtn");
-    const province = wireSelection("provincesTable", [provinceEditBtn, provinceDeleteBtn]);
+    const province = wireSelection("provincesTable", [
+      provinceEditBtn,
+      provinceDeleteBtn,
+    ]);
     provinceEditBtn?.addEventListener("click", () => {
       const selected = province.getSelected();
       if (!selected) return;
       document.getElementById("provinceEditName").value = selected.dataset.name;
-      document.getElementById("provinceEditForm").action = `/admin/provinces/${selected.dataset.id}/update`;
+      document.getElementById("provinceEditForm").action =
+        `/admin/provinces/${selected.dataset.id}/update`;
       new bootstrap.Modal(document.getElementById("provinceEditModal")).show();
     });
     provinceDeleteBtn?.addEventListener("click", () => {
       const selected = province.getSelected();
-      if (!selected || !confirm(`Delete province "${selected.dataset.name}"?`)) return;
+      if (!selected || !confirm(`Delete province "${selected.dataset.name}"?`))
+        return;
       const form = document.getElementById("provinceDeleteForm");
       form.action = `/admin/provinces/${selected.dataset.id}/delete`;
       form.submit();
@@ -260,21 +515,30 @@ block header_title %}Admin Console{% endblock %} {% block content %}
     const labEditBtn = document.getElementById("labEditBtn");
     const labDeleteBtn = document.getElementById("labDeleteBtn");
     const labMapBtn = document.getElementById("labMapBtn");
-    const lab = wireSelection("labsTable", [labEditBtn, labDeleteBtn, labMapBtn]);
+    const lab = wireSelection("labsTable", [
+      labEditBtn,
+      labDeleteBtn,
+      labMapBtn,
+    ]);
     labEditBtn?.addEventListener("click", () => {
       const selected = lab.getSelected();
       if (!selected) return;
       document.getElementById("labEditName").value = selected.dataset.name;
-      document.getElementById("labEditProvince").value = selected.dataset.provinceId;
-      document.getElementById("labEditLatitude").value = selected.dataset.latitude;
-      document.getElementById("labEditLongitude").value = selected.dataset.longitude;
+      document.getElementById("labEditProvince").value =
+        selected.dataset.provinceId;
+      document.getElementById("labEditLatitude").value =
+        selected.dataset.latitude;
+      document.getElementById("labEditLongitude").value =
+        selected.dataset.longitude;
       document.getElementById("labEditRadius").value = selected.dataset.radius;
-      document.getElementById("labEditForm").action = `/admin/labs/${selected.dataset.id}/update`;
+      document.getElementById("labEditForm").action =
+        `/admin/labs/${selected.dataset.id}/update`;
       new bootstrap.Modal(document.getElementById("labEditModal")).show();
     });
     labDeleteBtn?.addEventListener("click", () => {
       const selected = lab.getSelected();
-      if (!selected || !confirm(`Delete lab "${selected.dataset.name}"?`)) return;
+      if (!selected || !confirm(`Delete lab "${selected.dataset.name}"?`))
+        return;
       const form = document.getElementById("labDeleteForm");
       form.action = `/admin/labs/${selected.dataset.id}/delete`;
       form.submit();
@@ -290,32 +554,76 @@ block header_title %}Admin Console{% endblock %} {% block content %}
     const userEditBtn = document.getElementById("userEditBtn");
     const userDeleteBtn = document.getElementById("userDeleteBtn");
     const userResetBtn = document.getElementById("userResetBtn");
-    const user = wireSelection("usersTable", [userEditBtn, userDeleteBtn, userResetBtn]);
+    const user = wireSelection("usersTable", [
+      userEditBtn,
+      userDeleteBtn,
+      userResetBtn,
+    ]);
     userEditBtn?.addEventListener("click", () => {
       const selected = user.getSelected();
       if (!selected) return;
       document.getElementById("userEditName").value = selected.dataset.fullName;
-      document.getElementById("userEditStaffNumber").value = selected.dataset.staffNumber;
+      document.getElementById("userEditStaffNumber").value =
+        selected.dataset.staffNumber;
       document.getElementById("userEditEmail").value = selected.dataset.email;
       document.getElementById("userEditRole").value = selected.dataset.role;
-      document.getElementById("userEditLab").value = selected.dataset.assignedLabId;
-      document.getElementById("userEditActive").checked = selected.dataset.active === "1";
-      document.getElementById("userEditForm").action = `/admin/users/${selected.dataset.id}/update`;
+      document.getElementById("userEditLab").value =
+        selected.dataset.assignedLabId;
+      document.getElementById("userEditActive").checked =
+        selected.dataset.active === "1";
+      document.getElementById("userEditForm").action =
+        `/admin/users/${selected.dataset.id}/update`;
       new bootstrap.Modal(document.getElementById("userEditModal")).show();
     });
     userDeleteBtn?.addEventListener("click", () => {
       const selected = user.getSelected();
-      if (!selected || !confirm(`Delete user "${selected.dataset.fullName}"?`)) return;
+      if (!selected || !confirm(`Delete user "${selected.dataset.fullName}"?`))
+        return;
       const form = document.getElementById("userDeleteForm");
       form.action = `/admin/users/${selected.dataset.id}/delete`;
       form.submit();
     });
     userResetBtn?.addEventListener("click", () => {
       const selected = user.getSelected();
-      if (!selected || !confirm(`Reset password for "${selected.dataset.fullName}"?`)) return;
+      if (
+        !selected ||
+        !confirm(`Reset password for "${selected.dataset.fullName}"?`)
+      )
+        return;
       const form = document.getElementById("userResetForm");
       form.action = `/admin/users/${selected.dataset.id}/reset-password`;
-      form.submit();
+
+      // Make AJAX request instead of form.submit()
+      showLoadingOverlay();
+      fetch(form.action, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCsrfToken(),
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({}),
+      })
+        .then((response) => response.json())
+        .then((result) => {
+          hideLoadingOverlay();
+          if (result.success && result.temporary_password) {
+            showPasswordModal(result.temporary_password);
+          } else if (result.success) {
+            showToast(
+              result.message || "Password reset successfully.",
+              "success",
+            );
+          } else {
+            showToast(result.error || "Failed to reset password.", "danger");
+          }
+        })
+        .catch((error) => {
+          hideLoadingOverlay();
+          console.error(error);
+          showToast("Failed to reset password. Please try again.", "danger");
+        });
     });
   });
 </script>
