@@ -21,6 +21,7 @@ class Config:
         "pool_pre_ping": True,      # Checks if connection is "alive" before using (Fixes Azure timeouts)
     }
     # ----------------------------------
+
     
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
