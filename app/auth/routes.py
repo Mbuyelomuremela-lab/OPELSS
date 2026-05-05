@@ -5,14 +5,16 @@ from app.auth import auth_bp
 from .forms import LoginForm, PasswordResetForm
 from .services import authenticate_user, reset_password
 from app.models.announcement import Announcement
+from app.models.province import Province
+from sqlalchemy.orm import joinedload
 
 
 @auth_bp.route("/")
 def landing():
     announcements = Announcement.query.filter(Announcement.expiry_date >= date.today()).order_by(Announcement.created_at.desc()).all()
+    provinces = Province.query.options(joinedload(Province.labs)).order_by(Province.name).all()
     form = LoginForm()
-    #, form=form
-    return render_template("landing.html", announcements=announcements)
+    return render_template("landing.html", announcements=announcements, provinces=provinces)
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])

@@ -11,50 +11,29 @@ not_on_landing_page = False %} {% block title %}Landing – OPELSS{% endblock %}
   >Staff Login</a
 >
 {% endblock %} {% endif %} {% set on_landing_page = True %} {% block content %}
-<div class="container mt-5 ml-5">
+<div class="container mt-5">
   <div class="row gy-4 align-items-center">
     <div class="col-lg-6">
-      <h1 class="display-5 text-dark">UNISA: College of education</h1>
+      <h1 class="display-5 text-dark">UNISA: College of Education</h1>
       <p class="lead text-muted">
-        <span
-          ><img
-            src="../static/images/logo.png"
-            alt="oau logo"
-            class="me-2"
-            style="height: 40px; width: auto"
-        /></span>
+        <img
+          src="../static/images/logo.png"
+          alt="oau logo"
+          class="me-2"
+          style="height: 40px; width: auto"
+        />
         ODEL Acceleration Unit - e-learning lab support
       </p>
       <div class="mt-4 d-flex gap-2 flex-wrap">
-        <a href="#track-enquiry" class="btn btn-outline-secondary btn-lg"
+        <a
+          href="{{ url_for('enquiries.track') }}"
+          class="btn btn-success btn-lg"
           >Track Enquiry</a
         >
       </div>
     </div>
   </div>
 
-  <section id="track-enquiry" class="mt-5">
-    <div class="card rounded-4 shadow-sm">
-      <div class="card-body p-4">
-        <h2>Track an Enquiry</h2>
-        {#
-        <form method="post" action="{{ url_for('enquiries.track') }}">
-          {{ form.hidden_tag() }}
-          <div class="row g-3 align-items-end">
-            <div class="col-lg-8">
-              <label class="form-label">Tracking Number</label>
-              {{ form.tracking_number(class_='form-control',
-              placeholder='ENQ-2026-000001') }}
-            </div>
-            <div class="col-lg-4">
-              {{ form.submit(class_='btn btn-success w-100') }}
-            </div>
-          </div>
-        </form>
-        #}
-      </div>
-    </div>
-  </section>
   <div class="col-12 mt-5">
     <div
       id="announcementCarousel"
@@ -115,19 +94,22 @@ not_on_landing_page = False %} {% block title %}Landing – OPELSS{% endblock %}
       </button>
     </div>
   </div>
-  <div id="about_us"></div>
-  <div class="col-12 mt-5">
-    <div class="card rounded-4 shadow-sm p-4 mt-4">
-      <h2>About Us</h2>
-      <p class="text-muted">
-        The ODEL Acceleration Unit (OAU) at UNISA is dedicated to providing
-        comprehensive support for e-learning labs across our campuses. Our
-        mission is to ensure that students and staff have access to the
-        resources they need for a seamless online learning experience. We manage
-        lab operations, provide technical assistance, and facilitate the use of
-        digital tools to enhance education delivery.
-      </p>
+
+  <div id="about_us" class="row mt-5 gy-4">
+    <div class="col-12">
+      <div class="card rounded-4 shadow-sm p-4 h-100">
+        <h2>About Us</h2>
+        <p class="text-muted">
+          The ODEL Acceleration Unit (OAU) at UNISA is dedicated to providing
+          comprehensive support for e-learning labs across our campuses. Our
+          mission is to ensure that students and staff have access to the
+          resources they need for a seamless online learning experience. We
+          manage lab operations, provide technical assistance, and facilitate
+          the use of digital tools to enhance education delivery.
+        </p>
+      </div>
     </div>
   </div>
+
   {% endblock %}
 </div>
