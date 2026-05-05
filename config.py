@@ -22,6 +22,7 @@ class Config:
     }
     # ----------------------------------
 
+    
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     REMEMBER_COOKIE_HTTPONLY = True
