@@ -8,7 +8,7 @@
 
 body {
   background-color: var(--light-gray);
-  color: #2b2b2b; /* Good choice: dark enough for reading, softer than pure black */
+  color: #2b2b2b;
   font-family: "Inter", "Segoe UI", Roboto, sans-serif;
 }
 
@@ -24,7 +24,7 @@ body {
 
 .main-content {
   margin-left: 240px;
-  transition: all 0.25s ease;
+  transition: margin-left 0.25s ease;
 }
 
 .sidebar.active {
@@ -46,7 +46,7 @@ body {
   background-color: #ffffff;
   border: none;
   border-radius: 1rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* Very subtle shadow */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
 .btn-primary {
@@ -115,23 +115,68 @@ body {
   background-size: 60% 60%;
 }
 
+/* ── Selectable table rows ── */
 .selectable-table tbody tr {
   cursor: pointer;
+  transition: background-color 0.1s ease;
 }
 
-.selectable-table tbody tr.table-row-selected {
-  background-color: rgba(13, 59, 102, 0.12);
+/* Selected state — must beat Bootstrap's table-hover specificity */
+.selectable-table.table-hover > tbody > tr.table-row-selected,
+.selectable-table.table-hover > tbody > tr.table-row-selected:hover,
+table.selectable-table tbody tr.table-row-selected,
+table.selectable-table tbody tr.table-row-selected:hover {
+  background-color: rgba(13, 59, 102, 0.15) !important;
+  outline: 2px solid rgba(13, 59, 102, 0.35);
+  outline-offset: -1px;
+}
+
+/* Province group header rows in labs table */
+.province-group-header {
+  background-color: #e8edf5 !important;
+  font-weight: 600;
+  color: var(--dark-blue);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: default !important;
+  pointer-events: none;
+}
+
+.province-group-header td {
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+/* Mobile sidebar overlay backdrop */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1029;
+}
+
+.sidebar-backdrop.show {
+  display: block;
 }
 
 @media (max-width: 991px) {
+  /* On small screens, sidebar is hidden off-screen by default */
   .sidebar {
     position: fixed;
     z-index: 1030;
     transform: translateX(-260px);
   }
 
+  /* Slide in when toggled */
   .sidebar.active {
     transform: translateX(0);
+  }
+
+  /* Main content takes full width — no left margin */
+  .main-content {
+    margin-left: 0 !important;
   }
 
   .announcement-carousel .card-body {
