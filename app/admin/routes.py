@@ -19,6 +19,13 @@ from app.models.lab import Lab
 from app.models.user import User
 from app.utils import role_required
 
+def _sorted_labs():
+    return (
+        Lab.query
+        .join(Lab.province)
+        .order_by(Province.name, Lab.name)
+        .all()
+    )
 
 @admin_bp.route("/")
 @login_required
@@ -26,12 +33,7 @@ from app.utils import role_required
 def index():
     provinces = Province.query.order_by(Province.name).all()
     # Sort labs: group by province (alphabetical), then lab name alphabetical within each province
-    labs = (
-        Lab.query
-        .join(Lab.province)
-        .order_by(Province.name, Lab.name)
-        .all()
-    )
+    labs = _sorted_labs()
     users = User.query.order_by(User.full_name).all()
     province_form = ProvinceForm()
     lab_form = LabForm()
@@ -106,7 +108,7 @@ def add_lab():
 def add_user():
     form = UserForm()
     form.assigned_lab_id.choices = [(0, "Unassigned")] + [
-        (l.id, f"{l.name} ({l.province.name})") for l in Lab.query.order_by(Lab.name).all()
+        (l.id, f"{l.name} ({l.province.name})") for l in _sorted_labs()
     ]
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     
