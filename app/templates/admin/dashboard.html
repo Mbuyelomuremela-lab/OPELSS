@@ -113,25 +113,17 @@
       </button>
     </div>
   </div>
-  <div class="table-responsive">
-    <table class="table table-hover selectable-table" id="provincesTable">
-      <thead>
-        <tr>
-          <th>Name</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for province in provinces %}
-        <tr data-id="{{ province.id }}" data-name="{{ province.name }}">
-          <td>{{ province.name }}</td>
-        </tr>
-        {% else %}
-        <tr>
-          <td class="text-muted">No provinces added yet.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="d-flex flex-wrap gap-2 p-2" id="provincesTable">
+    {% for province in provinces %}
+    <span
+      class="badge rounded-pill border province-pill"
+      data-id="{{ province.id }}"
+      data-name="{{ province.name }}"
+      style="font-size: 0.85rem; font-weight: 500; padding: 0.5rem 1rem; cursor: pointer; background-color: #f5f7fb; color: #2b2b2b; border-color: #dee2e6 !important;"
+    >{{ province.name }}</span>
+    {% else %}
+    <span class="text-muted">No provinces added yet.</span>
+    {% endfor %}
   </div>
 </div>
 
@@ -500,10 +492,21 @@
 
     const provinceEditBtn = document.getElementById("provinceEditBtn");
     const provinceDeleteBtn = document.getElementById("provinceDeleteBtn");
-    const province = wireSelection("provincesTable", [
-      provinceEditBtn,
-      provinceDeleteBtn,
-    ]);
+    let selectedProvince = null;
+    document.querySelectorAll("#provincesTable .province-pill").forEach(pill => {
+      pill.addEventListener("click", () => {
+        document.querySelectorAll("#provincesTable .province-pill").forEach(p => {
+          p.style.backgroundColor = "#f5f7fb";
+          p.style.color = "#2b2b2b";
+        });
+        pill.style.backgroundColor = "#0d3b66";
+        pill.style.color = "#ffffff";
+        selectedProvince = pill;
+        provinceEditBtn && (provinceEditBtn.disabled = false);
+        provinceDeleteBtn && (provinceDeleteBtn.disabled = false);
+      });
+    });
+    const province = { getSelected: () => selectedProvince };
     provinceEditBtn?.addEventListener("click", () => {
       const selected = province.getSelected();
       if (!selected) return;
