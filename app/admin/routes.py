@@ -25,7 +25,13 @@ from app.utils import role_required
 @role_required("Admin")
 def index():
     provinces = Province.query.order_by(Province.name).all()
-    labs = Lab.query.order_by(Lab.name).all()
+    # Sort labs: group by province (alphabetical), then lab name alphabetical within each province
+    labs = (
+        Lab.query
+        .join(Lab.province)
+        .order_by(Province.name, Lab.name)
+        .all()
+    )
     users = User.query.order_by(User.full_name).all()
     province_form = ProvinceForm()
     lab_form = LabForm()
