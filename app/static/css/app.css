@@ -126,8 +126,8 @@ body {
 .selectable-table.table-hover > tbody > tr.table-row-selected:hover,
 table.selectable-table tbody tr.table-row-selected,
 table.selectable-table tbody tr.table-row-selected:hover {
-  background-color: rgba(13, 59, 102, 0.45) !important;
-  
+   background-color: #e3f2fd !important;
+  color: #0d3b66 !important;
 }
 
 /* Province group header rows in labs table */
