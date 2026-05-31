@@ -44,6 +44,24 @@ function insertHtml(selector, html) {
   }
 }
 
+// ============ Global async operation lock ============
+// Prevents any new operation from starting while one is already in progress.
+let _operationInProgress = false;
+
+function isOperationInProgress() {
+  return _operationInProgress;
+}
+
+function acquireOperationLock() {
+  if (_operationInProgress) return false;
+  _operationInProgress = true;
+  return true;
+}
+
+function releaseOperationLock() {
+  _operationInProgress = false;
+}
+
 // ============ Loading Overlay Functions ============
 function showLoadingOverlay() {
   const overlay = document.getElementById("loadingOverlay");
@@ -109,12 +127,22 @@ function setupPasswordModalListeners() {
   }
 
   if (closeBtn) {
-    closeBtn.addEventListener("click", hidePasswordModal);
+    closeBtn.addEventListener("click", () => {
+      hidePasswordModal();
+      releaseOperationLock();
+    });
   }
 }
 
 async function submitAjaxForm(event) {
   event.preventDefault();
+
+  // Block if another operation is already running
+  if (!acquireOperationLock()) {
+    showToast("Please wait for the current operation to finish before starting another.", "warning");
+    return;
+  }
+
   const form = event.target;
   const action = form.action;
   const method = form.method.toUpperCase() || "POST";
@@ -156,13 +184,14 @@ async function submitAjaxForm(event) {
       if (submitButton) {
         submitButton.disabled = false;
       }
+      releaseOperationLock();
       return;
     }
 
     // Check if password should be shown in modal
+    // Lock is released when user closes the password modal
     if (result.temporary_password) {
       showPasswordModal(result.temporary_password);
-      // Reset form after showing password modal
       if (typeof form.reset === "function") {
         form.reset();
       }
@@ -178,10 +207,12 @@ async function submitAjaxForm(event) {
       if (result.reset !== false && typeof form.reset === "function") {
         form.reset();
       }
+      releaseOperationLock();
       return;
     }
 
     if (result.redirect) {
+      // Lock stays held during redirect — page will reload anyway
       window.location.href = result.redirect;
       return;
     }
@@ -195,10 +226,12 @@ async function submitAjaxForm(event) {
     }
 
     if (result.reload !== false && result.temporary_password === undefined) {
-      // Only reload if we're not showing password modal
+      // Lock stays held during reload
       setTimeout(() => {
         window.location.reload();
       }, 1500);
+    } else {
+      releaseOperationLock();
     }
   } catch (error) {
     console.error(error);
@@ -207,6 +240,7 @@ async function submitAjaxForm(event) {
     if (submitButton) {
       submitButton.disabled = false;
     }
+    releaseOperationLock();
   }
 }
 
