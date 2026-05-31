@@ -177,7 +177,14 @@
         </tr>
       </thead>
       <tbody>
+        {% set ns = namespace(current_province=None) %}
         {% for lab in labs %}
+        {% if lab.province.name != ns.current_province %}
+        {% set ns.current_province = lab.province.name %}
+        <tr class="province-group-header">
+          <td colspan="5"><i class="fas fa-map-marker-alt me-2"></i>{{ lab.province.name }}</td>
+        </tr>
+        {% endif %}
         <tr
           data-id="{{ lab.id }}"
           data-name="{{ lab.name }}"
@@ -479,6 +486,8 @@
       table.addEventListener("click", (event) => {
         const row = event.target.closest("tr[data-id]");
         if (!row || !table.contains(row)) return;
+        // Skip province group header rows (no data-id, but guard anyway)
+        if (row.classList.contains("province-group-header")) return;
         table
           .querySelectorAll("tbody tr")
           .forEach((r) => r.classList.remove("table-row-selected"));
@@ -590,6 +599,13 @@
         !confirm(`Reset password for "${selected.dataset.fullName}"?`)
       )
         return;
+
+      // Block if another operation is in progress
+      if (!acquireOperationLock()) {
+        showToast("Please wait for the current operation to finish before starting another.", "warning");
+        return;
+      }
+
       const form = document.getElementById("userResetForm");
       form.action = `/admin/users/${selected.dataset.id}/reset-password`;
 
@@ -609,20 +625,24 @@
         .then((result) => {
           hideLoadingOverlay();
           if (result.success && result.temporary_password) {
+            // Lock is released when user closes the password modal
             showPasswordModal(result.temporary_password);
           } else if (result.success) {
             showToast(
               result.message || "Password reset successfully.",
               "success",
             );
+            releaseOperationLock();
           } else {
             showToast(result.error || "Failed to reset password.", "danger");
+            releaseOperationLock();
           }
         })
         .catch((error) => {
           hideLoadingOverlay();
           console.error(error);
           showToast("Failed to reset password. Please try again.", "danger");
+          releaseOperationLock();
         });
     });
   });
