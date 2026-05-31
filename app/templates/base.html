@@ -252,13 +252,46 @@
           .map((toastEl) => new bootstrap.Toast(toastEl, { delay: 5000 }))
           .forEach((toast) => toast.show());
         const toggle = document.getElementById("sidebarToggle");
-        if (toggle) {
-          toggle.addEventListener("click", () =>
-            document.getElementById("sidebar").classList.toggle("active"),
-          );
+        const sidebar = document.getElementById("sidebar");
+        const backdrop = document.getElementById("sidebarBackdrop");
+
+        function openSidebar() {
+          sidebar && sidebar.classList.add("active");
+          backdrop && backdrop.classList.add("show");
+          document.body.style.overflow = "hidden";
         }
+
+        function closeSidebar() {
+          sidebar && sidebar.classList.remove("active");
+          backdrop && backdrop.classList.remove("show");
+          document.body.style.overflow = "";
+        }
+
+        if (toggle) {
+          toggle.addEventListener("click", () => {
+            if (sidebar && sidebar.classList.contains("active")) {
+              closeSidebar();
+            } else {
+              openSidebar();
+            }
+          });
+        }
+
+        if (backdrop) {
+          backdrop.addEventListener("click", closeSidebar);
+        }
+
+        // Close sidebar automatically on resize to desktop
+        window.addEventListener("resize", () => {
+          if (window.innerWidth >= 992) {
+            closeSidebar();
+          }
+        });
       });
     </script>
+
+    <!-- Sidebar backdrop (mobile only) -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
