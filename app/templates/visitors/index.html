@@ -1,110 +1,204 @@
 {% extends "base.html" %} {% block title %}Visitors – OPELSS{% endblock %} {% block
 header_title %}Visitor Logs{% endblock %} {% block content %}
-<div class="row g-4">
-  <div class="col-lg-5">
-    <div class="card rounded-4 shadow-sm p-4">
-      <h5>Log a Visitor</h5>
-      <form
-        method="post"
-        action="{{ url_for('visitors.create_visitor') }}"
-        data-ajax="true"
-        data-refresh-target="#visitorsTableBody"
-      >
-        {{ form.hidden_tag() }}
-        <div class="mb-3">
-          {{ form.visitor_name.label(class_='form-label') }}{{
-          form.visitor_name(class_='form-control') }}
-        </div>
-        <div class="mb-3">
-          {{ form.category.label(class_='form-label') }}{{
-          form.category(class_='form-control') }}
-        </div>
-        <div class="mb-3">
-          {{ form.purpose.label(class_='form-label') }}{{
-          form.purpose(class_='form-control', rows=3) }}
-        </div>
-        <div class="row g-3">
-          <div class="col-md-6">
-            {{ form.visit_date.label(class_='form-label') }}{{
-            form.visit_date(class_='form-control') }}
-          </div>
-          <div class="col-md-6">
-            {{ form.lab_id.label(class_='form-label') }}{{
-            form.lab_id(class_='form-select') }}
-          </div>
-        </div>
-        <div class="mt-3">
-          {{ form.submit(class_='btn btn-success w-100') }}
-        </div>
-      </form>
+<div class="card rounded-4 shadow-sm p-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+    <div>
+      <h5>Visitor Records</h5>
+      <p class="text-muted mb-0">Filter visitor logs and quickly open the visitor entry modal.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-outline-primary" type="button" id="visitorEditBtn" disabled>Edit</button>
+      <button class="btn btn-outline-danger" type="button" id="visitorDeleteBtn" disabled>Delete</button>
+      <button class="btn btn-primary" type="button" id="visitorAddBtn">Log Visitor</button>
+      {% if current_user.role in ['Admin', 'HQ Trainee'] %}
+      <a
+        class="btn btn-outline-secondary"
+        href="{{ url_for('visitors.export', category=selected_category, visit_date=selected_visit_date, lab_id=selected_lab_id, province_id=selected_province_id) }}"
+      >Export to Excel</a>
+      {% endif %}
     </div>
   </div>
-  <div class="col-lg-7">
-    <div class="card rounded-4 shadow-sm p-4">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5>Visitor Records</h5>
-        <div class="d-flex gap-2">
-          <button class="btn btn-outline-primary" id="visitorEditBtn" type="button" disabled>Edit</button>
-          <button class="btn btn-outline-danger" id="visitorDeleteBtn" type="button" disabled>Delete</button>
-          {% if current_user.role in ['Admin', 'HQ Trainee'] %}
-          <a class="btn btn-primary" href="{{ url_for('visitors.export') }}">Export to Excel</a>
-          {% endif %}
-        </div>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-hover align-middle selectable-table" id="visitorsTable">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Purpose</th>
-              <th>Date</th>
-              <th>Lab</th>
-            </tr>
-          </thead>
-          <tbody id="visitorsTableBody">
-            {% for visitor in visitors %}
-            <tr
-              data-id="{{ visitor.id }}"
-              data-visitor-name="{{ visitor.visitor_name }}"
-              data-category="{{ visitor.category }}"
-              data-purpose="{{ visitor.purpose }}"
-              data-visit-date="{{ visitor.visit_date.strftime('%Y-%m-%d') }}"
-              data-lab-id="{{ visitor.lab_id }}"
-            >
-              <td>{{ visitor.visitor_name }}</td>
-              <td>{{ visitor.category }}</td>
-              <td>{{ visitor.purpose }}</td>
-              <td>{{ visitor.visit_date.strftime('%Y-%m-%d') }}</td>
-              <td>{{ visitor.lab.name }}</td>
-            </tr>
-            {% else %}
-            <tr>
-              <td colspan="5" class="text-center text-muted">
-                No visitor logs yet.
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+
+  <form id="visitorFiltersForm" method="get" class="row mb-4 gx-3 gy-3">
+    <div class="col-md-3">
+      <label class="form-label" for="filterCategory">Category</label>
+      <select id="filterCategory" class="form-select" onchange="document.getElementById('visitorFiltersForm').submit()" name="category">
+        <option value="">All</option>
+        {% for option in ['Educator', 'Unisa Student', 'High School Learner', 'Others'] %}
+        <option value="{{ option }}" {% if selected_category == option %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
     </div>
+    <div class="col-md-3">
+      <label class="form-label" for="filterDate">Date</label>
+      <input
+        type="date"
+        id="filterDate"
+        class="form-control"
+        name="visit_date"
+        value="{{ selected_visit_date or '' }}"
+        onchange="document.getElementById('visitorFiltersForm').submit()"
+      />
+    </div>
+    {% if current_user.role not in ['Lab Trainee'] %}
+    <div class="col-md-3">
+      <label class="form-label" for="filterLab">Lab</label>
+      <select id="filterLab" class="form-select" name="lab_id" onchange="document.getElementById('visitorFiltersForm').submit()">
+        <option value="">All</option>
+        {% for lab in labs %}
+        <option value="{{ lab.id }}" {% if selected_lab_id == lab.id %}selected{% endif %}>{{ lab.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="filterProvince">Province</label>
+      <select id="filterProvince" class="form-select" name="province_id" onchange="document.getElementById('visitorFiltersForm').submit()">
+        <option value="">All</option>
+        {% for province in provinces %}
+        <option value="{{ province.id }}" {% if selected_province_id == province.id %}selected{% endif %}>{{ province.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle selectable-table" id="visitorsTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Reason for Visit</th>
+          <th>Date</th>
+          <th>Lab</th>
+        </tr>
+      </thead>
+      <tbody id="visitorsTableBody">
+        {% for visitor in visitors %}
+        <tr
+          data-id="{{ visitor.id }}"
+          data-visitor-name="{{ visitor.visitor_name }}"
+          data-category="{{ visitor.category }}"
+          data-purpose="{{ visitor.purpose }}"
+          data-visit-date="{{ visitor.visit_date.strftime('%Y-%m-%d') }}"
+          data-lab-id="{{ visitor.lab_id }}"
+          data-student-number="{{ visitor.student_number or '' }}"
+          data-id-number="{{ visitor.id_number or '' }}"
+        >
+          <td>{{ visitor.visitor_name }}</td>
+          <td>{{ visitor.category }}</td>
+          <td>{{ visitor.purpose }}</td>
+          <td>{{ visitor.visit_date.strftime('%Y-%m-%d') }}</td>
+          <td>{{ visitor.lab.name }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="text-center text-muted">
+            No visitor logs yet.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
 
+<div class="modal fade" id="visitorFormModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+    <form id="visitorForm" method="post" action="{{ url_for('visitors.create_visitor') }}" data-ajax="true" data-refresh-target="#visitorsTableBody">
+      <div class="modal-header">
+        <h5 class="modal-title">Log a Visitor</h5>
+        <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.visitor_name.label(class_='form-label') }}
+          {{ form.visitor_name(class_='form-control') }}
+        </div>
+        <div class="mb-3">
+          {{ form.category.label(class_='form-label') }}
+          {{ form.category(class_='form-select', id='visitorCategory') }}
+        </div>
+        <div class="mb-3" id="studentNumberGroup" style="display: none;">
+          {{ form.student_number.label(class_='form-label') }}
+          {{ form.student_number(class_='form-control', id='studentNumber') }}
+        </div>
+        <div class="mb-3" id="idNumberGroup" style="display: none;">
+          {{ form.id_number.label(class_='form-label') }}
+          {{ form.id_number(class_='form-control', id='idNumber') }}
+        </div>
+        <div class="mb-3">
+          {{ form.purpose.label(class_='form-label') }}
+          {{ form.purpose(class_='form-control', rows=3) }}
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            {{ form.visit_date.label(class_='form-label') }}
+            {{ form.visit_date(class_='form-control') }}
+          </div>
+          <div class="col-md-6">
+            {{ form.lab_id.label(class_='form-label') }}
+            {{ form.lab_id(class_='form-select') }}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+        {{ form.submit(class_='btn btn-success') }}
+      </div>
+    </form>
+  </div></div>
+</div>
+
 <div class="modal fade" id="visitorEditModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
     <form id="visitorEditForm" method="post">
-      <div class="modal-header"><h5 class="modal-title">Edit Visitor</h5><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Visitor</h5>
+        <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+      </div>
       <div class="modal-body">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="mb-3">{{ form.visitor_name(class_='form-control', id='visitorEditName') }}</div>
-        <div class="mb-3">{{ form.category(class_='form-control', id='visitorEditCategory') }}</div>
-        <div class="mb-3">{{ form.purpose(class_='form-control', id='visitorEditPurpose', rows=3) }}</div>
-        <div class="mb-3">{{ form.visit_date(class_='form-control', id='visitorEditDate') }}</div>
-        <div class="mb-3">{{ form.lab_id(class_='form-select', id='visitorEditLab') }}</div>
+        <div class="mb-3">
+          <label class="form-label" for="visitorEditName">Visitor Name</label>
+          <input type="text" id="visitorEditName" name="visitor_name" class="form-control" required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="visitorEditCategory">Category</label>
+          <select id="visitorEditCategory" name="category" class="form-select" required>
+            {% for option in ['Educator', 'Unisa Student', 'High School Learner', 'Others'] %}
+            <option value="{{ option }}">{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3" id="visitorEditStudentNumberGroup" style="display:none;">
+          <label class="form-label" for="visitorEditStudentNumber">Student Number</label>
+          <input type="text" id="visitorEditStudentNumber" name="student_number" class="form-control" />
+        </div>
+        <div class="mb-3" id="visitorEditIdNumberGroup" style="display:none;">
+          <label class="form-label" for="visitorEditIdNumber">ID Number</label>
+          <input type="text" id="visitorEditIdNumber" name="id_number" class="form-control" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="visitorEditPurpose">Reason for Visit</label>
+          <textarea id="visitorEditPurpose" name="purpose" class="form-control" rows="3" required></textarea>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="visitorEditDate">Visit Date</label>
+            <input type="date" id="visitorEditDate" name="visit_date" class="form-control" required />
+          </div>
+          <div class="col-md-6">
+            {{ form.lab_id.label(class_='form-label') }}
+            {{ form.lab_id(class_='form-select', id='visitorEditLab') }}
+          </div>
+        </div>
       </div>
-      <div class="modal-footer"><button class="btn btn-primary" type="submit">Save</button></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" type="submit">Save</button>
+      </div>
     </form>
   </div></div>
 </div>
@@ -112,6 +206,39 @@ header_title %}Visitor Logs{% endblock %} {% block content %}
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+    const visitorAddBtn = document.getElementById("visitorAddBtn");
+    const visitorFormModal = new bootstrap.Modal(document.getElementById("visitorFormModal"));
+    const visitorCategory = document.getElementById("visitorCategory");
+    const studentNumberGroup = document.getElementById("studentNumberGroup");
+    const idNumberGroup = document.getElementById("idNumberGroup");
+    const visitorEditCategory = document.getElementById("visitorEditCategory");
+    const visitorEditStudentNumberGroup = document.getElementById("visitorEditStudentNumberGroup");
+    const visitorEditIdNumberGroup = document.getElementById("visitorEditIdNumberGroup");
+    const visitorEditForm = document.getElementById("visitorEditForm");
+
+    const updateConditionalFields = (category, studentGroup, idGroup) => {
+      if (category === "Unisa Student") {
+        studentGroup.style.display = "block";
+        idGroup.style.display = "none";
+      } else {
+        studentGroup.style.display = "none";
+        idGroup.style.display = "block";
+      }
+    };
+
+    visitorAddBtn?.addEventListener("click", () => {
+      visitorFormModal.show();
+      updateConditionalFields(visitorCategory.value, studentNumberGroup, idNumberGroup);
+    });
+
+    visitorCategory?.addEventListener("change", () => {
+      updateConditionalFields(visitorCategory.value, studentNumberGroup, idNumberGroup);
+    });
+
+    visitorEditCategory?.addEventListener("change", () => {
+      updateConditionalFields(visitorEditCategory.value, visitorEditStudentNumberGroup, visitorEditIdNumberGroup);
+    });
+
     const table = document.getElementById("visitorsTable");
     const editBtn = document.getElementById("visitorEditBtn");
     const deleteBtn = document.getElementById("visitorDeleteBtn");
@@ -125,6 +252,7 @@ header_title %}Visitor Logs{% endblock %} {% block content %}
       editBtn.disabled = false;
       deleteBtn.disabled = false;
     });
+
     editBtn?.addEventListener("click", () => {
       if (!selected) return;
       document.getElementById("visitorEditName").value = selected.dataset.visitorName;
@@ -132,9 +260,13 @@ header_title %}Visitor Logs{% endblock %} {% block content %}
       document.getElementById("visitorEditPurpose").value = selected.dataset.purpose;
       document.getElementById("visitorEditDate").value = selected.dataset.visitDate;
       document.getElementById("visitorEditLab").value = selected.dataset.labId;
-      document.getElementById("visitorEditForm").action = `/visitors/${selected.dataset.id}/update`;
+      document.getElementById("visitorEditStudentNumber").value = selected.dataset.studentNumber || "";
+      document.getElementById("visitorEditIdNumber").value = selected.dataset.idNumber || "";
+      updateConditionalFields(selected.dataset.category, visitorEditStudentNumberGroup, visitorEditIdNumberGroup);
+      visitorEditForm.action = `/visitors/${selected.dataset.id}/update`;
       new bootstrap.Modal(document.getElementById("visitorEditModal")).show();
     });
+
     deleteBtn?.addEventListener("click", () => {
       if (!selected || !confirm(`Delete visitor "${selected.dataset.visitorName}"?`)) return;
       const form = document.getElementById("visitorDeleteForm");

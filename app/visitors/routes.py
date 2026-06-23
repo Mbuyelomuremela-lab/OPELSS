@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import render_template, redirect, url_for, flash, request, send_file, abort, jsonify
 from flask_login import login_required, current_user
 from app.visitors import visitors_bp
@@ -13,21 +15,54 @@ from app.extensions import db
 @visitors_bp.route("/")
 @login_required
 def index():
+    category = request.args.get("category", type=str)
+    visit_date_str = request.args.get("visit_date", type=str)
+    lab_id = request.args.get("lab_id", type=int)
+    province_id = request.args.get("province_id", type=int)
+
+    query = Visitor.query.join(Lab)
     if current_user.role == "Lab Trainee":
         if not current_user.assigned_lab:
             flash("You are not assigned to a lab yet.", "warning")
             return redirect(url_for("dashboard.home"))
-        visitors = Visitor.query.filter_by(lab_id=current_user.assigned_lab_id).order_by(Visitor.visit_date.desc()).all()
+        query = query.filter(Visitor.lab_id == current_user.assigned_lab_id)
+    if category:
+        query = query.filter(Visitor.category == category)
+    if visit_date_str:
+        try:
+            visit_date = datetime.strptime(visit_date_str, "%Y-%m-%d").date()
+            query = query.filter(Visitor.visit_date == visit_date)
+        except ValueError:
+            visit_date = None
     else:
-        visitors = Visitor.query.order_by(Visitor.visit_date.desc()).all()
+        visit_date = None
 
+    if current_user.role != "Lab Trainee":
+        if lab_id:
+            query = query.filter(Visitor.lab_id == lab_id)
+        if province_id:
+            query = query.filter(Lab.province_id == province_id)
+
+    visitors = query.order_by(Visitor.visit_date.desc()).all()
     labs = Lab.query.order_by(Lab.name).all()
+    provinces = Province.query.order_by(Province.name).all()
+
     form = VisitorForm()
     form.lab_id.choices = [(lab.id, f"{lab.name} ({lab.province.name})") for lab in labs]
     if current_user.role == "Lab Trainee":
         form.lab_id.data = current_user.assigned_lab_id
 
-    return render_template("visitors/index.html", visitors=visitors, form=form)
+    return render_template(
+        "visitors/index.html",
+        visitors=visitors,
+        form=form,
+        labs=labs,
+        provinces=provinces,
+        selected_category=category,
+        selected_visit_date=visit_date_str,
+        selected_lab_id=lab_id,
+        selected_province_id=province_id,
+    )
 
 
 @visitors_bp.route("/create", methods=["POST"])
@@ -43,6 +78,8 @@ def create_visitor():
         visitor = Visitor(
             visitor_name=form.visitor_name.data,
             category=form.category.data,
+            student_number=form.student_number.data if form.category.data == "Unisa Student" else None,
+            id_number=form.id_number.data if form.category.data != "Unisa Student" else None,
             purpose=form.purpose.data,
             visit_date=form.visit_date.data,
             lab_id=form.lab_id.data,
@@ -76,9 +113,22 @@ def create_visitor():
 def export():
     if current_user.role not in ["Admin", "HQ Trainee"]:
         abort(403)
-    province_id = request.args.get("province_id", type=int)
+    category = request.args.get("category", type=str)
+    visit_date_str = request.args.get("visit_date", type=str)
     lab_id = request.args.get("lab_id", type=int)
-    buffer = export_visitors_excel(province_id=province_id, lab_id=lab_id)
+    province_id = request.args.get("province_id", type=int)
+    visit_date = None
+    if visit_date_str:
+        try:
+            visit_date = datetime.strptime(visit_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            visit_date = None
+    buffer = export_visitors_excel(
+        province_id=province_id,
+        lab_id=lab_id,
+        category=category,
+        visit_date=visit_date,
+    )
     return send_file(
         buffer,
         as_attachment=True,
@@ -100,6 +150,8 @@ def update_visitor(visitor_id):
             abort(403)
         visitor.visitor_name = form.visitor_name.data
         visitor.category = form.category.data
+        visitor.student_number = form.student_number.data if form.category.data == "Unisa Student" else None
+        visitor.id_number = form.id_number.data if form.category.data != "Unisa Student" else None
         visitor.purpose = form.purpose.data
         visitor.visit_date = form.visit_date.data
         visitor.lab_id = form.lab_id.data

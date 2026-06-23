@@ -5,8 +5,12 @@ from app.models.visitor import Visitor
 from app.models.lab import Lab
 
 
-def export_visitors_excel(province_id=None, lab_id=None):
+def export_visitors_excel(province_id=None, lab_id=None, category=None, visit_date=None):
     query = Visitor.query.join(Lab)
+    if category:
+        query = query.filter(Visitor.category == category)
+    if visit_date:
+        query = query.filter(Visitor.visit_date == visit_date)
     if lab_id:
         query = query.filter(Visitor.lab_id == lab_id)
     if province_id:
