@@ -9,6 +9,7 @@
         action="{{ url_for('attendance.clock_in') }}"
         method="post"
         id="clockInForm"
+        data-require-geolocation="true"
       >
         {{ clock_in_form.hidden_tag() }}
         <button type="submit" class="btn btn-success w-100">
@@ -24,6 +25,7 @@
         action="{{ url_for('attendance.clock_out') }}"
         method="post"
         id="clockOutForm"
+        data-require-geolocation="true"
       >
         {{ clock_out_form.hidden_tag() }}
         <div class="mb-3">

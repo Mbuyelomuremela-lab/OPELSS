@@ -60,8 +60,8 @@ def index():
         provinces=provinces,
         selected_category=category,
         selected_visit_date=visit_date_str,
-        selected_lab_id=lab_id,
-        selected_province_id=province_id,
+        selected_lab_id=str(lab_id) if lab_id is not None else "",
+        selected_province_id=str(province_id) if province_id is not None else "",
     )
 
 

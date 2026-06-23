@@ -3,16 +3,55 @@ function fillGeolocation(formId) {
   if (!form) return;
   const lat = form.querySelector('input[name="latitude"]');
   const lon = form.querySelector('input[name="longitude"]');
+  const submit = form.querySelector('button[type="submit"]');
   if (!lat || !lon) return;
 
+  const requiresGeolocation = form.dataset.requireGeolocation === "true";
+
+  const restoreSubmit = () => {
+    if (!submit) return;
+    submit.disabled = false;
+    if (submit.dataset.originalText) {
+      submit.textContent = submit.dataset.originalText;
+    }
+  };
+
+  if (requiresGeolocation) {
+    form.addEventListener("submit", (event) => {
+      if (!lat.value || !lon.value) {
+        event.preventDefault();
+        showToast(
+          "Waiting for your location. Please allow geolocation and try again.",
+          "warning",
+        );
+      }
+    });
+  }
+
   if (navigator.geolocation) {
+    if (submit && requiresGeolocation) {
+      submit.dataset.originalText = submit.textContent;
+      submit.disabled = true;
+      submit.textContent = "Fetching location...";
+    }
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         lat.value = position.coords.latitude;
         lon.value = position.coords.longitude;
+        if (requiresGeolocation) {
+          restoreSubmit();
+        }
       },
       () => {
         console.warn("Geolocation permission denied or unavailable.");
+        if (requiresGeolocation) {
+          restoreSubmit();
+          showToast(
+            "Unable to obtain location. Please enable geolocation and try again.",
+            "danger",
+          );
+        }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
@@ -139,7 +178,10 @@ async function submitAjaxForm(event) {
 
   // Block if another operation is already running
   if (!acquireOperationLock()) {
-    showToast("Please wait for the current operation to finish before starting another.", "warning");
+    showToast(
+      "Please wait for the current operation to finish before starting another.",
+      "warning",
+    );
     return;
   }
 

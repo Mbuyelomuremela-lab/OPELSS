@@ -40,7 +40,7 @@ header_title %}Asset Management{% endblock %} {% block content %}
             <select name="lab_id" class="form-select">
               <option value="">All</option>
               {% for lab in labs %}
-              <option value="{{ lab.id }}" {% if request.args.get('lab_id', type=int) == lab.id %}selected{% endif %}>{{ lab.name }} ({{ lab.province.name }})</option>
+              <option value="{{ lab.id }}" {% if request.args.get('lab_id') == lab.id|string %}selected{% endif %}>{{ lab.name }} ({{ lab.province.name }})</option>
               {% endfor %}
             </select>
           </div>
@@ -49,7 +49,7 @@ header_title %}Asset Management{% endblock %} {% block content %}
             <select name="province_id" class="form-select">
               <option value="">All</option>
               {% for p in provinces %}
-              <option value="{{ p.id }}" {% if request.args.get('province_id', type=int) == p.id %}selected{% endif %}>{{ p.name }}</option>
+              <option value="{{ p.id }}" {% if request.args.get('province_id') == p.id|string %}selected{% endif %}>{{ p.name }}</option>
               {% endfor %}
             </select>
           </div>

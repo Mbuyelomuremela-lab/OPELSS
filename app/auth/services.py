@@ -27,7 +27,10 @@ def authenticate_user(email: str, password: str, latitude: str = None, longitude
 
         distance = haversine_distance(lat, lon, lab.latitude, lab.longitude)
         if distance > lab.radius_meters:
-            return None, "You must be inside your assigned lab radius to log in."
+            return None, (
+                f"Your location is {int(distance)} meters from your assigned lab. "
+                f"You must be within {int(lab.radius_meters)} meters to log in."
+            )
 
     return user, None
 
