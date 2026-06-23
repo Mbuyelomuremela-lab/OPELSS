@@ -6,26 +6,45 @@ from app.assets.services import export_assets_excel
 from app.extensions import db
 from app.models.asset import Asset
 from app.models.lab import Lab
+from app.models.province import Province
 
 
 @assets_bp.route("/")
 @login_required
 def index():
+    category = request.args.get('category', type=str)
+    status = request.args.get('status', type=str)
+    lab_filter = request.args.get('lab_id', type=int)
+    province_filter = request.args.get('province_id', type=int)
+
+    query = Asset.query.join(Lab)
+
     if current_user.role == "Lab Trainee":
         if not current_user.assigned_lab:
             flash("You do not have an assigned lab yet.", "warning")
             return redirect(url_for("dashboard.home"))
-        assets = Asset.query.filter_by(lab_id=current_user.assigned_lab_id).order_by(Asset.asset_name).all()
+        query = query.filter(Asset.lab_id == current_user.assigned_lab_id)
     else:
-        assets = Asset.query.order_by(Asset.asset_name).all()
+        if lab_filter:
+            query = query.filter(Asset.lab_id == lab_filter)
+        if province_filter:
+            query = query.filter(Lab.province_id == province_filter)
+
+    if category:
+        query = query.filter(Asset.category == category)
+    if status:
+        query = query.filter(Asset.status == status)
+
+    assets = query.order_by(Asset.asset_name).all()
 
     labs = Lab.query.order_by(Lab.name).all()
+    provinces = Province.query.order_by(Province.name).all()
     form = AssetForm()
     form.lab_id.choices = [(lab.id, f"{lab.name} ({lab.province.name})") for lab in labs]
     if current_user.role == "Lab Trainee":
         form.lab_id.data = current_user.assigned_lab_id
 
-    return render_template("assets/index.html", assets=assets, form=form)
+    return render_template("assets/index.html", assets=assets, form=form, labs=labs, provinces=provinces)
 
 
 @assets_bp.route("/create", methods=["POST"])
@@ -76,7 +95,9 @@ def export():
         abort(403)
     province_id = request.args.get("province_id", type=int)
     lab_id = request.args.get("lab_id", type=int)
-    buffer = export_assets_excel(province_id=province_id, lab_id=lab_id)
+    category = request.args.get("category", type=str)
+    status = request.args.get("status", type=str)
+    buffer = export_assets_excel(province_id=province_id, lab_id=lab_id, category=category, status=status)
     return send_file(
         buffer,
         as_attachment=True,

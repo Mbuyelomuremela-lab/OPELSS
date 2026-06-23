@@ -1,59 +1,72 @@
 {% extends "base.html" %} {% block title %}Assets – OPELSS{% endblock %} {% block
 header_title %}Asset Management{% endblock %} {% block content %}
 <div class="row g-4">
-  <div class="col-lg-5">
-    <div class="card rounded-4 shadow-sm p-4">
-      <h5>Add Asset</h5>
-      <form
-        method="post"
-        action="{{ url_for('assets.create_asset') }}"
-        data-ajax="true"
-        data-refresh-target="#assetsTableBody"
-      >
-        {{ form.hidden_tag() }}
-        <div class="mb-3">
-          {{ form.asset_name.label(class_='form-label') }}{{
-          form.asset_name(class_='form-control') }}
-        </div>
-        <div class="mb-3">
-          {{ form.category.label(class_='form-label') }}{{
-          form.category(class_='form-control') }}
-        </div>
-        <div class="mb-3">
-          {{ form.serial_number.label(class_='form-label') }}{{
-          form.serial_number(class_='form-control') }}
-        </div>
-        <div class="mb-3">
-          {{ form.status.label(class_='form-label') }}{{
-          form.status(class_='form-select') }}
-        </div>
-        <div class="mb-3">
-          {{ form.lab_id.label(class_='form-label') }}{{
-          form.lab_id(class_='form-select') }}
-        </div>
-        {{ form.submit(class_='btn btn-success w-100') }}
-      </form>
-    </div>
-  </div>
-  <div class="col-lg-7">
+  <div class="col-12">
     <div class="card rounded-4 shadow-sm p-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5>Asset Inventory</h5>
         <div class="d-flex gap-2">
+          <button class="btn btn-outline-success" id="assetAddBtn" type="button">Add</button>
           <button class="btn btn-outline-primary" id="assetEditBtn" type="button" disabled>Edit</button>
           <button class="btn btn-outline-danger" id="assetDeleteBtn" type="button" disabled>Delete</button>
           {% if current_user.role in ['Admin', 'HQ Trainee'] %}
-          <a class="btn btn-primary" href="{{ url_for('assets.export') }}">Export to Excel</a>
+          <a class="btn btn-primary" href="{{ url_for('assets.export', **request.args) }}">Export to Excel</a>
           {% endif %}
         </div>
+      </div>
+      <div class="mb-3">
+        <form id="assetFiltersForm" method="get" class="row g-2 align-items-end">
+          <div class="col-auto">
+            <label class="form-label small">Category</label>
+            <select name="category" class="form-select">
+              <option value="">All</option>
+              {% for val, label in form.category.choices %}
+              <option value="{{ val }}" {% if request.args.get('category') == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-auto">
+            <label class="form-label small">Status</label>
+            <select name="status" class="form-select">
+              <option value="">All</option>
+              {% for val, label in form.status.choices %}
+              <option value="{{ val }}" {% if request.args.get('status') == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% if current_user.role in ['Admin', 'HQ Trainee'] %}
+          <div class="col-auto">
+            <label class="form-label small">Lab</label>
+            <select name="lab_id" class="form-select">
+              <option value="">All</option>
+              {% for lab in labs %}
+              <option value="{{ lab.id }}" {% if request.args.get('lab_id', type=int) == lab.id %}selected{% endif %}>{{ lab.name }} ({{ lab.province.name }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-auto">
+            <label class="form-label small">Province</label>
+            <select name="province_id" class="form-select">
+              <option value="">All</option>
+              {% for p in provinces %}
+              <option value="{{ p.id }}" {% if request.args.get('province_id', type=int) == p.id %}selected{% endif %}>{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <div class="col-auto">
+            <button class="btn btn-secondary" type="submit">Apply</button>
+            <a class="btn btn-link" href="{{ url_for('assets.index') }}">Reset</a>
+          </div>
+        </form>
       </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle selectable-table" id="assetsTable">
           <thead>
             <tr>
-              <th>Name</th>
+              <th>Asset Description</th>
               <th>Category</th>
-              <th>Serial</th>
+              <th>Unisa Tag Number</th>
               <th>Status</th>
               <th>Lab</th>
             </tr>
@@ -88,6 +101,24 @@ header_title %}Asset Management{% endblock %} {% block content %}
   </div>
 </div>
 
+<!-- Add Asset Modal -->
+<div class="modal fade" id="assetAddModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <form id="assetAddForm" method="post" action="{{ url_for('assets.create_asset') }}" data-ajax="true" data-refresh-target="#assetsTableBody">
+      <div class="modal-header"><h5 class="modal-title">Add Asset</h5><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">{{ form.asset_name.label(class_='form-label') }}{{ form.asset_name(class_='form-control') }}</div>
+        <div class="mb-3">{{ form.category.label(class_='form-label') }}{{ form.category(class_='form-select') }}</div>
+        <div class="mb-3">{{ form.serial_number.label(class_='form-label') }}{{ form.serial_number(class_='form-control') }}</div>
+        <div class="mb-3">{{ form.status.label(class_='form-label') }}{{ form.status(class_='form-select') }}</div>
+        <div class="mb-3">{{ form.lab_id.label(class_='form-label') }}{{ form.lab_id(class_='form-select') }}</div>
+      </div>
+      <div class="modal-footer">{{ form.submit(class_='btn btn-success') }}</div>
+    </form>
+  </div></div>
+</div>
+
 <div class="modal fade" id="assetEditModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
     <form id="assetEditForm" method="post">
@@ -109,6 +140,7 @@ header_title %}Asset Management{% endblock %} {% block content %}
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const table = document.getElementById("assetsTable");
+    const addBtn = document.getElementById("assetAddBtn");
     const editBtn = document.getElementById("assetEditBtn");
     const deleteBtn = document.getElementById("assetDeleteBtn");
     let selected = null;
@@ -121,6 +153,10 @@ header_title %}Asset Management{% endblock %} {% block content %}
       editBtn.disabled = false;
       deleteBtn.disabled = false;
     });
+    addBtn?.addEventListener("click", () => {
+      new bootstrap.Modal(document.getElementById("assetAddModal")).show();
+    });
+
     editBtn?.addEventListener("click", () => {
       if (!selected) return;
       document.getElementById("assetEditName").value = selected.dataset.assetName;

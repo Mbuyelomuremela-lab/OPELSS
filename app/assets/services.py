@@ -5,18 +5,22 @@ from app.models.asset import Asset
 from app.models.lab import Lab
 
 
-def export_assets_excel(province_id=None, lab_id=None):
+def export_assets_excel(province_id=None, lab_id=None, category=None, status=None):
     query = Asset.query.join(Lab)
     if lab_id:
         query = query.filter(Asset.lab_id == lab_id)
     if province_id:
         query = query.filter(Lab.province_id == province_id)
+    if category:
+        query = query.filter(Asset.category == category)
+    if status:
+        query = query.filter(Asset.status == status)
 
     assets = query.order_by(Asset.asset_name).all()
     workbook = Workbook()
     raw = workbook.active
     raw.title = "Assets"
-    headers = ["Asset Name", "Category", "Serial Number", "Status", "Lab", "Province"]
+    headers = ["Asset Description", "Category", "Unisa Tag Number", "Status", "Lab", "Province"]
     raw.append(headers)
 
     for asset in assets:
