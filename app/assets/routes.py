@@ -12,10 +12,10 @@ from app.models.province import Province
 @assets_bp.route("/")
 @login_required
 def index():
-    category = request.args.get('category', type=str)
-    status = request.args.get('status', type=str)
-    lab_filter = request.args.get('lab_id', type=int)
-    province_filter = request.args.get('province_id', type=int)
+    category = request.args.get("category") or None
+    status = request.args.get("status") or None
+    lab_filter = request.args.get("lab_id", type=int)
+    province_filter = request.args.get("province_id", type=int)
 
     query = Asset.query.join(Lab)
 
@@ -44,7 +44,17 @@ def index():
     if current_user.role == "Lab Trainee":
         form.lab_id.data = current_user.assigned_lab_id
 
-    return render_template("assets/index.html", assets=assets, form=form, labs=labs, provinces=provinces)
+    return render_template(
+        "assets/index.html",
+        assets=assets,
+        form=form,
+        labs=labs,
+        provinces=provinces,
+        selected_category=category,
+        selected_status=status,
+        selected_lab_id=lab_filter,
+        selected_province_id=province_filter,
+    )
 
 
 @assets_bp.route("/create", methods=["POST"])
@@ -95,8 +105,8 @@ def export():
         abort(403)
     province_id = request.args.get("province_id", type=int)
     lab_id = request.args.get("lab_id", type=int)
-    category = request.args.get("category", type=str)
-    status = request.args.get("status", type=str)
+    category = request.args.get("category") or None
+    status = request.args.get("status") or None
     buffer = export_assets_excel(province_id=province_id, lab_id=lab_id, category=category, status=status)
     return send_file(
         buffer,

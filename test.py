@@ -18,8 +18,11 @@ else:
         engine = create_engine(db_url)
         with engine.connect() as connection:
             result = connection.execute(text("SELECT 1"))
-            if result.fetchone()[0] == 1:
+            row = result.fetchone()
+            if row is not None and row[0] == 1:
                 print("✅ SUCCESS: Successfully connected to your Azure PostgreSQL database!")
+            else:
+                print("❌ CONNECTION FAILED!")
     except Exception as e:
         print("❌ CONNECTION FAILED!")
         print(f"Error Details: {e}")

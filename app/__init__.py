@@ -4,6 +4,9 @@ from flask_login import current_user
 from config import Config
 from app.extensions import db, migrate, login_manager, csrf
 
+# Import models so SQLAlchemy registers all tables during app startup.
+from app import models  # noqa: F401
+
 
 def create_app():
     app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -51,6 +54,10 @@ def create_app():
             "is_hq_admin": role in ["Admin", "HQ Trainee"],
             "is_trainee": role == "Lab Trainee",
         }
+
+    with app.app_context():
+        db.create_all()
+        seed_data()
 
     _ensure_runtime_schema_columns(app)
 
