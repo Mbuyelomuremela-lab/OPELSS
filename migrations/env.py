@@ -7,7 +7,6 @@ from pathlib import Path
 
 from alembic import context
 from flask import current_app
-from sqlalchemy import engine_from_config, pool
 
 config = context.config
 config_file_name = config.config_file_name
@@ -35,11 +34,11 @@ def run_migrations_offline():
 
 
 def run_migrations_online():
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix='sqlalchemy.',
-        poolclass=pool.NullPool,
-    )
+    # Use the Flask app's configured engine so migrations always target the
+    # real database (DATABASE_URL / SQLALCHEMY_DATABASE_URI). Building the engine
+    # from the alembic.ini section instead would silently fall back to its
+    # placeholder sqlalchemy.url (sqlite:///app.db).
+    connectable = current_app.extensions['migrate'].db.engine
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
@@ -47,12 +46,10 @@ def run_migrations_online():
             context.run_migrations()
 
 
-def run_migrations():
-    if context.is_offline_mode():
-        run_migrations_offline()
-    else:
-        run_migrations_online()
-
-
-if __name__ == '__main__':
-    run_migrations()
+# Alembic executes this module with __name__ set to the module name (not
+# "__main__"), so the migrations must be invoked at import time — guarding this
+# behind `if __name__ == "__main__"` would silently skip every migration.
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
