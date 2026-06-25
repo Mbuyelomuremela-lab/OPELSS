@@ -17,7 +17,7 @@ header_title %}Visitor Logs{% endblock %} {% block content %}
         </div>
         <div class="mb-3">
           {{ form.category.label(class_='form-label') }}{{
-          form.category(class_='form-control') }}
+          form.category(class_='form-select') }}
         </div>
         <div class="mb-3">
           {{ form.purpose.label(class_='form-label') }}{{
@@ -99,7 +99,7 @@ header_title %}Visitor Logs{% endblock %} {% block content %}
       <div class="modal-body">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <div class="mb-3">{{ form.visitor_name(class_='form-control', id='visitorEditName') }}</div>
-        <div class="mb-3">{{ form.category(class_='form-control', id='visitorEditCategory') }}</div>
+        <div class="mb-3">{{ form.category(class_='form-select', id='visitorEditCategory') }}</div>
         <div class="mb-3">{{ form.purpose(class_='form-control', id='visitorEditPurpose', rows=3) }}</div>
         <div class="mb-3">{{ form.visit_date(class_='form-control', id='visitorEditDate') }}</div>
         <div class="mb-3">{{ form.lab_id(class_='form-select', id='visitorEditLab') }}</div>
