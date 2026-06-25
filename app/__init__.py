@@ -77,6 +77,13 @@ def _ensure_runtime_schema_columns(app: Flask) -> None:
                 }
                 if "poster_filename" not in announcement_columns:
                     conn.exec_driver_sql("ALTER TABLE announcements ADD COLUMN poster_filename VARCHAR(255)")
+                visitor_columns = {
+                    row[1] for row in conn.exec_driver_sql("PRAGMA table_info(visitors)").fetchall()
+                }
+                if "student_number" not in visitor_columns:
+                    conn.exec_driver_sql("ALTER TABLE visitors ADD COLUMN student_number VARCHAR(8)")
+                if "cellphone_number" not in visitor_columns:
+                    conn.exec_driver_sql("ALTER TABLE visitors ADD COLUMN cellphone_number VARCHAR(20)")
         except Exception:
             # App should remain bootable even when database is mounted read-only.
             pass

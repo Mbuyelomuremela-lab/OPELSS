@@ -40,9 +40,12 @@ def create_visitor():
         if current_user.role == "Lab Trainee" and form.lab_id.data != current_user.assigned_lab_id:
             abort(403)
 
+        is_unisa = form.category.data == "UNISA Student"
         visitor = Visitor(
             visitor_name=form.visitor_name.data,
             category=form.category.data,
+            student_number=form.student_number.data if is_unisa else None,
+            cellphone_number=None if is_unisa else form.cellphone_number.data,
             purpose=form.purpose.data,
             visit_date=form.visit_date.data,
             lab_id=form.lab_id.data,
@@ -54,6 +57,8 @@ def create_visitor():
             <tr>
               <td>{visitor.visitor_name}</td>
               <td>{visitor.category}</td>
+              <td>{visitor.student_number or ''}</td>
+              <td>{visitor.cellphone_number or ''}</td>
               <td>{visitor.purpose}</td>
               <td>{visitor.visit_date.strftime('%Y-%m-%d')}</td>
               <td>{visitor.lab.name}</td>
@@ -98,8 +103,11 @@ def update_visitor(visitor_id):
             abort(403)
         if current_user.role == "Lab Trainee" and form.lab_id.data != current_user.assigned_lab_id:
             abort(403)
+        is_unisa = form.category.data == "UNISA Student"
         visitor.visitor_name = form.visitor_name.data
         visitor.category = form.category.data
+        visitor.student_number = form.student_number.data if is_unisa else None
+        visitor.cellphone_number = None if is_unisa else form.cellphone_number.data
         visitor.purpose = form.purpose.data
         visitor.visit_date = form.visit_date.data
         visitor.lab_id = form.lab_id.data
