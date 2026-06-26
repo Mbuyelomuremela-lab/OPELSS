@@ -166,6 +166,20 @@ header_title %}Visitor Logs{% endblock %} {% block content %}
     const addForm = document.getElementById("visitorAddForm");
     addForm?.addEventListener("reset", () => setTimeout(refreshCreateFields, 0));
 
+    // Auto-close the modal once a visitor is logged. main.js inserts the new
+    // row into the table body on success, so closing on that mutation fires
+    // only after a successful add (not on a validation error).
+    const visitorsBody = document.getElementById("visitorsTableBody");
+    if (visitorsBody) {
+      new MutationObserver((mutations) => {
+        if (!mutations.some((m) => m.addedNodes.length > 0)) return;
+        const addModalEl = document.getElementById("visitorAddModal");
+        if (addModalEl?.classList.contains("show")) {
+          bootstrap.Modal.getOrCreateInstance(addModalEl).hide();
+        }
+      }).observe(visitorsBody, { childList: true });
+    }
+
     // --- Edit modal: toggle contact fields by category ---
     const editCategory = document.getElementById("visitorEditCategory");
     const editStudentField = document.getElementById("visitorEditStudentField");
