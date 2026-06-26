@@ -7,3 +7,4 @@ from app.models.visitor import Visitor
 from app.models.enquiry import Enquiry
 from app.models.programme import Programme
 from app.models.announcement import Announcement
+from app.models.activity_log import ActivityLog

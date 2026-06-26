@@ -115,6 +115,15 @@
               >
             </li>
             {% endif %}
+            {% if current_user.is_authenticated and current_user.role == "Admin" %}
+            <li class="nav-item">
+              <a
+                class="nav-link text-white"
+                href="{{ url_for('audit.index') }}"
+                ><i class="fas fa-clipboard-list me-2"></i>Audit Log</a
+              >
+            </li>
+            {% endif %}
             <li class="nav-item mt-3">
               <a class="nav-link text-white" href="{{ url_for('auth.logout') }}"
                 ><i class="fas fa-sign-out-alt me-2"></i>Logout</a

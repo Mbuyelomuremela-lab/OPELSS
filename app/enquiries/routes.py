@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app.enquiries import enquiries_bp
 from app.enquiries.forms import EnquiryForm, UpdateEnquiryForm, TrackingForm
 from app.enquiries.services import create_enquiry, update_enquiry_status
+from app.audit.services import log_activity
 from app.models.enquiry import Enquiry
 from app.models.lab import Lab
 from app.models.province import Province
@@ -45,6 +46,7 @@ def create():
             description=form.description.data,
             lab_id=form.lab_id.data,
         )
+        log_activity("created", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
         if request.is_json:
             row_html = f"""
             <tr>
@@ -88,6 +90,7 @@ def update(enquiry_id):
             resolution_note=form.resolution_note.data,
             escalated=form.status.data == "Escalated",
         )
+        log_activity("updated", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
         if request.is_json:
             return jsonify(success=True, message="Enquiry status updated successfully.", redirect=url_for("enquiries.index"))
         flash("Enquiry status updated successfully.", "success")
@@ -112,7 +115,9 @@ def delete(enquiry_id):
     enquiry = Enquiry.query.get_or_404(enquiry_id)
     if current_user.role == "Lab Trainee" and enquiry.lab_id != current_user.assigned_lab_id:
         abort(403)
+    label, entity_id = f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id
     db.session.delete(enquiry)
     db.session.commit()
+    log_activity("deleted", "enquiry", label, entity_id)
     flash("Enquiry deleted successfully.", "success")
     return redirect(url_for("enquiries.index"))

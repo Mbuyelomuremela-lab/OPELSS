@@ -30,6 +30,7 @@ def create_app():
     from app.programmes import programmes_bp
     from app.announcements import announcements_bp
     from app.reports import reports_bp
+    from app.audit import audit_bp
 
     blueprints = [
         auth_bp,
@@ -42,6 +43,7 @@ def create_app():
         programmes_bp,
         announcements_bp,
         reports_bp,
+        audit_bp,
     ]
 
     for bp in blueprints:

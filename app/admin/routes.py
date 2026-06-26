@@ -14,6 +14,7 @@ from app.admin.services import (
     delete_user,
     reset_user_password,
 )
+from app.audit.services import log_activity
 from app.models.province import Province
 from app.models.lab import Lab
 from app.models.user import User
@@ -82,13 +83,14 @@ def add_lab():
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     
     if form.validate_on_submit():
-        create_lab(
+        lab = create_lab(
             name=form.name.data,
             province_id=form.province_id.data,
             latitude=form.latitude.data,
             longitude=form.longitude.data,
             radius_meters=form.radius_meters.data,
         )
+        log_activity("created", "lab", lab.name, lab.id)
         message = "Lab created successfully."
         if is_ajax:
             return jsonify({"success": True, "message": message})
@@ -213,6 +215,7 @@ def edit_lab(lab_id):
         return redirect(url_for("admin.index"))
 
     update_lab(lab, name, province_id, latitude, longitude, radius_meters)
+    log_activity("updated", "lab", lab.name, lab.id)
     flash("Lab updated successfully.", "success")
     return redirect(url_for("admin.index"))
 
@@ -225,7 +228,9 @@ def remove_lab(lab_id):
     if any([lab.users, lab.attendance_logs, lab.assets, lab.visitors, lab.enquiries, lab.programmes]):
         flash("Cannot delete lab with linked records. Move or clear dependencies first.", "danger")
         return redirect(url_for("admin.index"))
+    label, entity_id = lab.name, lab.id
     delete_lab(lab)
+    log_activity("deleted", "lab", label, entity_id)
     flash("Lab deleted successfully.", "success")
     return redirect(url_for("admin.index"))
 

@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app.assets import assets_bp
 from app.assets.forms import AssetForm
 from app.assets.services import export_assets_excel
+from app.audit.services import log_activity
 from app.extensions import db
 from app.models.asset import Asset
 from app.models.lab import Lab
@@ -76,6 +77,7 @@ def create_asset():
         )
         db.session.add(asset)
         db.session.commit()
+        log_activity("created", "asset", asset.asset_name, asset.id)
         if request.is_json:
             row_html = f"""
             <tr>
@@ -133,6 +135,7 @@ def update_asset(asset_id):
         asset.status = form.status.data
         asset.lab_id = form.lab_id.data
         db.session.commit()
+        log_activity("updated", "asset", asset.asset_name, asset.id)
         flash("Asset updated successfully.", "success")
     else:
         flash("Unable to update asset. Please review the form.", "danger")
@@ -145,7 +148,9 @@ def delete_asset(asset_id):
     asset = Asset.query.get_or_404(asset_id)
     if current_user.role == "Lab Trainee" and asset.lab_id != current_user.assigned_lab_id:
         abort(403)
+    label, entity_id = asset.asset_name, asset.id
     db.session.delete(asset)
     db.session.commit()
+    log_activity("deleted", "asset", label, entity_id)
     flash("Asset deleted successfully.", "success")
     return redirect(url_for("assets.index"))
