@@ -121,13 +121,13 @@ body {
   transition: background-color 0.1s ease;
 }
 
-/* Selected state — must beat Bootstrap's table-hover specificity */
-.selectable-table.table-hover > tbody > tr.table-row-selected,
-.selectable-table.table-hover > tbody > tr.table-row-selected:hover,
-table.selectable-table tbody tr.table-row-selected,
-table.selectable-table tbody tr.table-row-selected:hover {
-   background-color: #e3f2fd !important;
+/* Selected state — target <td> cells to beat Bootstrap 5's CSS-variable-based hover layer */
+.selectable-table tbody tr.table-row-selected > td,
+.selectable-table tbody tr.table-row-selected:hover > td {
+  background-color: #e3f2fd !important;
   color: #0d3b66 !important;
+  --bs-table-bg-state: #e3f2fd !important;
+  --bs-table-color-state: #0d3b66 !important;
 }
 
 /* Province group header rows in labs table */
