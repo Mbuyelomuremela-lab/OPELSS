@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import render_template, redirect, url_for, flash, request, send_file, abort, jsonify
 from flask_login import login_required, current_user
 from app.visitors import visitors_bp
@@ -10,24 +11,65 @@ from app.utils import role_required
 from app.extensions import db
 
 
+def _parse_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
 @visitors_bp.route("/")
 @login_required
 def index():
+    category = request.args.get("category") or None
+    date_from = _parse_date(request.args.get("date_from"))
+    date_to = _parse_date(request.args.get("date_to"))
+    lab_filter = request.args.get("lab_id", type=int)
+    province_filter = request.args.get("province_id", type=int)
+
+    query = Visitor.query.join(Lab)
+
     if current_user.role == "Lab Trainee":
         if not current_user.assigned_lab:
             flash("You are not assigned to a lab yet.", "warning")
             return redirect(url_for("dashboard.home"))
-        visitors = Visitor.query.filter_by(lab_id=current_user.assigned_lab_id).order_by(Visitor.visit_date.desc()).all()
+        query = query.filter(Visitor.lab_id == current_user.assigned_lab_id)
     else:
-        visitors = Visitor.query.order_by(Visitor.visit_date.desc()).all()
+        if lab_filter:
+            query = query.filter(Visitor.lab_id == lab_filter)
+        if province_filter:
+            query = query.filter(Lab.province_id == province_filter)
+
+    if category:
+        query = query.filter(Visitor.category == category)
+    if date_from:
+        query = query.filter(Visitor.visit_date >= date_from)
+    if date_to:
+        query = query.filter(Visitor.visit_date <= date_to)
+
+    visitors = query.order_by(Visitor.visit_date.desc()).all()
 
     labs = Lab.query.order_by(Lab.name).all()
+    provinces = Province.query.order_by(Province.name).all()
     form = VisitorForm()
     form.lab_id.choices = [(lab.id, f"{lab.name} ({lab.province.name})") for lab in labs]
     if current_user.role == "Lab Trainee":
         form.lab_id.data = current_user.assigned_lab_id
 
-    return render_template("visitors/index.html", visitors=visitors, form=form)
+    return render_template(
+        "visitors/index.html",
+        visitors=visitors,
+        form=form,
+        labs=labs,
+        provinces=provinces,
+        selected_category=category,
+        selected_date_from=request.args.get("date_from") or "",
+        selected_date_to=request.args.get("date_to") or "",
+        selected_lab_id=lab_filter,
+        selected_province_id=province_filter,
+    )
 
 
 @visitors_bp.route("/create", methods=["POST"])
@@ -83,7 +125,16 @@ def export():
         abort(403)
     province_id = request.args.get("province_id", type=int)
     lab_id = request.args.get("lab_id", type=int)
-    buffer = export_visitors_excel(province_id=province_id, lab_id=lab_id)
+    category = request.args.get("category") or None
+    date_from = _parse_date(request.args.get("date_from"))
+    date_to = _parse_date(request.args.get("date_to"))
+    buffer = export_visitors_excel(
+        province_id=province_id,
+        lab_id=lab_id,
+        category=category,
+        date_from=date_from,
+        date_to=date_to,
+    )
     return send_file(
         buffer,
         as_attachment=True,

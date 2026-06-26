@@ -10,9 +10,54 @@ header_title %}Visitor Logs{% endblock %} {% block content %}
           <button class="btn btn-outline-primary" id="visitorEditBtn" type="button" disabled>Edit</button>
           <button class="btn btn-outline-danger" id="visitorDeleteBtn" type="button" disabled>Delete</button>
           {% if current_user.role in ['Admin', 'HQ Trainee'] %}
-          <a class="btn btn-primary" href="{{ url_for('visitors.export') }}">Export to Excel</a>
+          <a class="btn btn-primary" href="{{ url_for('visitors.export', **request.args) }}">Export to Excel</a>
           {% endif %}
         </div>
+      </div>
+      <div class="mb-3">
+        <form id="visitorFiltersForm" method="get" class="row g-2 align-items-end">
+          <div class="col-auto">
+            <label class="form-label small">Category</label>
+            <select name="category" class="form-select">
+              <option value="">All</option>
+              {% for val, label in form.category.choices %}
+              <option value="{{ val }}" {% if selected_category == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-auto">
+            <label class="form-label small">From</label>
+            <input type="date" name="date_from" class="form-control" value="{{ selected_date_from }}" />
+          </div>
+          <div class="col-auto">
+            <label class="form-label small">To</label>
+            <input type="date" name="date_to" class="form-control" value="{{ selected_date_to }}" />
+          </div>
+          {% if current_user.role in ['Admin', 'HQ Trainee'] %}
+          <div class="col-auto">
+            <label class="form-label small">Lab</label>
+            <select name="lab_id" class="form-select">
+              <option value="">All</option>
+              {% for lab in labs %}
+              <option value="{{ lab.id }}" {% if selected_lab_id == lab.id %}selected{% endif %}>{{ lab.name }} ({{ lab.province.name }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-auto">
+            <label class="form-label small">Province</label>
+            <select name="province_id" class="form-select">
+              <option value="">All</option>
+              {% for p in provinces %}
+              <option value="{{ p.id }}" {% if selected_province_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <div class="col-auto">
+            <button class="btn btn-secondary" type="submit">Apply</button>
+            <a class="btn btn-link" href="{{ url_for('visitors.index') }}">Reset</a>
+          </div>
+        </form>
       </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle selectable-table" id="visitorsTable">
