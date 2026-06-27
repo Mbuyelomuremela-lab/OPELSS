@@ -413,7 +413,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
 {% endif %}
 
 {# ── Tracking number confirmation modal (after submit) ── #}
-<div class="modal fade" id="trackingConfirmModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+<div class="modal fade" id="trackingConfirmModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content text-center p-4">
       <div class="mb-3">
@@ -425,7 +425,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
         <code class="fs-4 fw-bold text-dark" id="confirmTrackingNumber"></code>
       </div>
       <p class="text-muted small" id="confirmStudentName"></p>
-      <button class="btn btn-warning text-white w-100" data-bs-dismiss="modal">Done</button>
+      <button class="btn btn-warning text-white w-100" id="trackingConfirmDoneBtn">Done</button>
     </div>
   </div>
 </div>
@@ -513,10 +513,12 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("confirmTrackingNumber").textContent = data.tracking_number;
         document.getElementById("confirmStudentName").textContent = `Student: ${data.student_name}`;
         const confirmModal = document.getElementById("trackingConfirmModal");
-        if (data.reload) {
-          confirmModal.addEventListener("hidden.bs.modal", () => location.reload(), { once: true });
-        }
-        new bootstrap.Modal(confirmModal).show();
+        const bsConfirm = new bootstrap.Modal(confirmModal, { backdrop: "static", keyboard: false });
+        document.getElementById("trackingConfirmDoneBtn").onclick = () => {
+          bsConfirm.hide();
+          if (data.reload) location.reload();
+        };
+        bsConfirm.show();
         createForm.reset();
       } else {
         alert(data.message || "Failed to submit enquiry.");
