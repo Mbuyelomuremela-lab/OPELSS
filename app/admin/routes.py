@@ -286,10 +286,34 @@ def edit_user(user_id):
 @login_required
 @role_required("Admin")
 def remove_user(user_id):
+    from app.models.attendance import AttendanceAudit
+    from app.models.enquiry import Enquiry
+    from app.models.asset import Asset
+    from app.models.programme import Programme
+    from app.models.announcement import Announcement
+
     user = User.query.get_or_404(user_id)
+
     if user.role == "Admin" and User.query.filter_by(role="Admin").count() <= 1:
         flash("Cannot delete the last admin user.", "danger")
         return redirect(url_for("admin.index"))
+
+    has_records = (
+        AttendanceAudit.query.filter_by(changed_by=user.id).first() is not None
+        or Enquiry.query.filter_by(assigned_to=user.id).first() is not None
+        or Asset.query.filter_by(created_by=user.id).first() is not None
+        or Programme.query.filter_by(created_by=user.id).first() is not None
+        or Announcement.query.filter_by(created_by=user.id).first() is not None
+    )
+
+    if has_records:
+        flash(
+            f"{user.full_name} has activity records in the system and cannot be deleted. "
+            "Deactivate their account instead by unchecking Active in the Edit form.",
+            "warning",
+        )
+        return redirect(url_for("admin.index"))
+
     delete_user(user)
     flash("User deleted successfully.", "success")
     return redirect(url_for("admin.index"))
