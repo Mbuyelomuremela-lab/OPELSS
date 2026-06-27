@@ -201,7 +201,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
 {# ── Lab Trainee: Edit Modal ── #}
 <div class="modal fade" id="enquiryEditModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
-    <form id="enquiryEditForm" method="post" data-ajax="true">
+    <form id="enquiryEditForm" method="post" data-ajax-action="true">
       <div class="modal-header">
         <h5 class="modal-title">Edit Enquiry</h5>
         <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
@@ -273,7 +273,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
 {% if current_user.role == "Admin" %}
 <div class="modal fade" id="enquiryAssignModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-    <form id="enquiryAssignForm" method="post" data-ajax="true">
+    <form id="enquiryAssignForm" method="post" data-ajax-action="true">
       <div class="modal-header">
         <h5 class="modal-title">Assign Enquiry</h5>
         <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
@@ -370,14 +370,14 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
       <p class="text-muted small" id="actionEnquiryInfo"></p>
 
       {# Start Progress #}
-      <form id="startProgressForm" method="post" data-ajax="true" class="d-none">
+      <form id="startProgressForm" method="post" data-ajax-action="true" class="d-none">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <p>Mark this enquiry as <strong>In Progress</strong>?</p>
         <button class="btn btn-warning w-100" type="submit">Start Handling</button>
       </form>
 
       {# Resolve #}
-      <form id="resolveForm" method="post" data-ajax="true" class="d-none">
+      <form id="resolveForm" method="post" data-ajax-action="true" class="d-none">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <div class="mb-3">
           {{ resolve_form.resolution_note.label(class_='form-label') }}
@@ -387,7 +387,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
       </form>
 
       {# Not Resolved #}
-      <form id="notResolvedForm" method="post" data-ajax="true" class="d-none">
+      <form id="notResolvedForm" method="post" data-ajax-action="true" class="d-none">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <div class="mb-3">
           {{ not_resolved_form.not_resolved_reason.label(class_='form-label') }}
@@ -633,7 +633,9 @@ document.addEventListener("DOMContentLoaded", () => {
   {% endif %}
 
   // ── AJAX for assign/resolve/not-resolved/edit/start forms ──
-  document.querySelectorAll("form[data-ajax='true']:not(#enquiryCreateForm)").forEach(form => {
+  // NOTE: these use data-ajax-action (not data-ajax) so main.js's global
+  // bindAjaxForms() does NOT also bind them — avoids double submission.
+  document.querySelectorAll("form[data-ajax-action='true']").forEach(form => {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const formData = new FormData(form);
