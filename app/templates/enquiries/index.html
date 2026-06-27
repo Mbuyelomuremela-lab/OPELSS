@@ -29,6 +29,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
           {{ form.escalation_reason.label(class_='form-label') }}
           {{ form.escalation_reason(class_='form-control', rows=3, placeholder='Why can\'t this be resolved at lab level?') }}
         </div>
+        {{ form.lab_id(type='hidden') }}
         {{ form.submit(class_='btn btn-warning w-100 text-white') }}
       </form>
     </div>
@@ -339,7 +340,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const resp = await fetch(createForm.action, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest", "X-CSRFToken": obj.csrf_token || "" },
         body: JSON.stringify(obj),
       });
       const data = await resp.json();
@@ -417,7 +418,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const resp = await fetch(form.action, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+          headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest", "X-CSRFToken": obj.csrf_token || "" },
           body: JSON.stringify(obj),
         });
         const data = await resp.json();

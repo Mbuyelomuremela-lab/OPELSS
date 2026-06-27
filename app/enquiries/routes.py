@@ -68,6 +68,10 @@ def create():
     payload = request.get_json() if request.is_json else None
     form = EnquiryForm(data=payload) if payload else EnquiryForm()
     form.lab_id.choices = [(lab.id, f"{lab.name} ({lab.province.name})") for lab in labs]
+    # Lab Trainee always submits to their own lab; skip lab_id form validation for JSON
+    if request.is_json:
+        form.lab_id.validators = []
+        form.lab_id.data = current_user.assigned_lab_id
 
     if form.validate_on_submit():
         enquiry = create_enquiry(
