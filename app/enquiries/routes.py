@@ -1,13 +1,25 @@
 from flask import render_template, redirect, url_for, flash, request, abort, jsonify
 from flask_login import login_required, current_user
 from app.enquiries import enquiries_bp
-from app.enquiries.forms import EnquiryForm, UpdateEnquiryForm, TrackingForm
-from app.enquiries.services import create_enquiry, update_enquiry_status
+from app.enquiries.forms import (
+    EnquiryForm, AssignEnquiryForm, ResolveEnquiryForm, NotResolvedForm, TrackingForm
+)
+from app.enquiries.services import (
+    create_enquiry, assign_enquiry, start_progress,
+    resolve_enquiry, mark_not_resolved, close_enquiry, reassign_enquiry,
+)
 from app.audit.services import log_activity
 from app.models.enquiry import Enquiry
 from app.models.lab import Lab
-from app.models.province import Province
+from app.models.user import User
 from app.extensions import db
+
+
+def _hq_users():
+    return User.query.filter(
+        User.role.in_(["Admin", "HQ Trainee"]),
+        User.active == True,
+    ).order_by(User.full_name).all()
 
 
 @enquiries_bp.route("/")
@@ -18,6 +30,8 @@ def index():
             flash("Your lab has not been assigned yet.", "warning")
             return redirect(url_for("dashboard.home"))
         enquiries = Enquiry.query.filter_by(lab_id=current_user.assigned_lab_id).order_by(Enquiry.created_at.desc()).all()
+    elif current_user.role == "HQ Trainee":
+        enquiries = Enquiry.query.order_by(Enquiry.created_at.desc()).all()
     else:
         enquiries = Enquiry.query.order_by(Enquiry.created_at.desc()).all()
 
@@ -27,75 +41,255 @@ def index():
     if current_user.role == "Lab Trainee":
         form.lab_id.data = current_user.assigned_lab_id
 
-    return render_template("enquiries/index.html", enquiries=enquiries, form=form)
+    assign_form = AssignEnquiryForm()
+    assign_form.assigned_to.choices = [(u.id, u.full_name) for u in _hq_users()]
+
+    resolve_form = ResolveEnquiryForm()
+    not_resolved_form = NotResolvedForm()
+
+    return render_template(
+        "enquiries/index.html",
+        enquiries=enquiries,
+        form=form,
+        assign_form=assign_form,
+        resolve_form=resolve_form,
+        not_resolved_form=not_resolved_form,
+        labs=labs,
+    )
 
 
 @enquiries_bp.route("/create", methods=["POST"])
 @login_required
 def create():
+    if current_user.role != "Lab Trainee":
+        abort(403)
+
+    labs = Lab.query.order_by(Lab.name).all()
     payload = request.get_json() if request.is_json else None
     form = EnquiryForm(data=payload) if payload else EnquiryForm()
-    form.lab_id.choices = [(lab.id, f"{lab.name} ({lab.province.name})") for lab in Lab.query.order_by(Lab.name).all()]
+    form.lab_id.choices = [(lab.id, f"{lab.name} ({lab.province.name})") for lab in labs]
+    # Lab Trainee always submits to their own lab; skip lab_id form validation for JSON
+    if request.is_json:
+        form.lab_id.validators = []
+        form.lab_id.data = current_user.assigned_lab_id
+
     if form.validate_on_submit():
-        if current_user.role == "Lab Trainee" and form.lab_id.data != current_user.assigned_lab_id:
-            abort(403)
         enquiry = create_enquiry(
             student_name=form.student_name.data,
             student_number=form.student_number.data,
             category=form.category.data,
             description=form.description.data,
-            lab_id=form.lab_id.data,
+            lab_id=current_user.assigned_lab_id,
+            escalation_reason=form.escalation_reason.data,
         )
         log_activity("created", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
         if request.is_json:
-            row_html = f"""
-            <tr>
-              <td>{enquiry.tracking_number}</td>
-              <td>{enquiry.student_name}</td>
-              <td>{enquiry.category}</td>
-              <td>{enquiry.status}</td>
-              <td>{enquiry.lab.name}</td>
-              <td>{'Yes' if enquiry.escalated else 'No'}</td>
-              <td>
-                <a href=\"{url_for('enquiries.update', enquiry_id=enquiry.id)}\" class=\"btn btn-sm btn-outline-primary\">Update</a>
-              </td>
-            </tr>
-            """
-            return jsonify(success=True, message=f"Enquiry created with tracking {enquiry.tracking_number}.", row_html=row_html, reload=False, reset=True)
-        flash(f"Enquiry created with tracking {enquiry.tracking_number}.", "success")
+            return jsonify(
+                success=True,
+                message=f"Enquiry submitted and escalated to HQ.",
+                tracking_number=enquiry.tracking_number,
+                student_name=enquiry.student_name,
+                reload=True,
+            )
+        flash(f"Enquiry {enquiry.tracking_number} submitted and escalated to HQ.", "success")
     else:
-        errors = "; ".join(
-            [f"{field}: {', '.join(messages)}" for field, messages in form.errors.items()]
-        )
+        errors = "; ".join([f"{f}: {', '.join(m)}" for f, m in form.errors.items()])
         if request.is_json:
             return jsonify(success=False, message=f"Unable to submit enquiry. {errors}"), 400
         flash("Unable to submit enquiry. Please check the form.", "danger")
     return redirect(url_for("enquiries.index"))
 
 
-@enquiries_bp.route("/update/<int:enquiry_id>", methods=["GET", "POST"])
+@enquiries_bp.route("/<int:enquiry_id>/assign", methods=["POST"])
 @login_required
-def update(enquiry_id):
+def assign(enquiry_id):
+    if current_user.role != "Admin":
+        abort(403)
     enquiry = Enquiry.query.get_or_404(enquiry_id)
-    if current_user.role not in ["Admin", "HQ Trainee"] and current_user.role != "Lab Trainee":
-        abort(403)
-    if current_user.role == "Lab Trainee" and enquiry.lab_id != current_user.assigned_lab_id:
-        abort(403)
-    payload = request.get_json() if request.is_json else None
-    form = UpdateEnquiryForm(obj=enquiry, data=payload) if payload else UpdateEnquiryForm(obj=enquiry)
+    if enquiry.status not in ("Open", "Not Resolved"):
+        flash("This enquiry cannot be assigned at its current status.", "warning")
+        return redirect(url_for("enquiries.index"))
+
+    form = AssignEnquiryForm()
+    form.assigned_to.choices = [(u.id, u.full_name) for u in _hq_users()]
     if form.validate_on_submit():
-        update_enquiry_status(
-            enquiry,
-            status=form.status.data,
-            resolution_note=form.resolution_note.data,
-            escalated=form.status.data == "Escalated",
-        )
+        assign_enquiry(enquiry, assigned_to=form.assigned_to.data, assigned_by=current_user.id)
+        log_activity("assigned", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
+        if request.is_json:
+            return jsonify(success=True, message="Enquiry assigned successfully.", reload=True)
+        flash("Enquiry assigned successfully.", "success")
+    else:
+        if request.is_json:
+            return jsonify(success=False, message="Invalid assignment."), 400
+        flash("Invalid assignment.", "danger")
+    return redirect(url_for("enquiries.index"))
+
+
+@enquiries_bp.route("/<int:enquiry_id>/start", methods=["POST"])
+@login_required
+def start(enquiry_id):
+    if current_user.role not in ("Admin", "HQ Trainee"):
+        abort(403)
+    enquiry = Enquiry.query.get_or_404(enquiry_id)
+    if enquiry.assigned_to != current_user.id and current_user.role != "Admin":
+        abort(403)
+    if enquiry.status != "Assigned":
+        flash("Enquiry must be in Assigned status to start.", "warning")
+        return redirect(url_for("enquiries.index"))
+    start_progress(enquiry)
+    log_activity("started", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
+    if request.is_json:
+        return jsonify(success=True, message="Enquiry marked as In Progress.", reload=True)
+    flash("Enquiry marked as In Progress.", "success")
+    return redirect(url_for("enquiries.index"))
+
+
+@enquiries_bp.route("/<int:enquiry_id>/resolve", methods=["POST"])
+@login_required
+def resolve(enquiry_id):
+    if current_user.role not in ("Admin", "HQ Trainee"):
+        abort(403)
+    enquiry = Enquiry.query.get_or_404(enquiry_id)
+    if enquiry.assigned_to != current_user.id and current_user.role != "Admin":
+        abort(403)
+    if enquiry.status != "In Progress":
+        flash("Enquiry must be In Progress to resolve.", "warning")
+        return redirect(url_for("enquiries.index"))
+
+    payload = request.get_json() if request.is_json else None
+    form = ResolveEnquiryForm(data=payload) if payload else ResolveEnquiryForm()
+    if form.validate_on_submit():
+        resolve_enquiry(enquiry, resolution_note=form.resolution_note.data)
+        log_activity("resolved", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
+        if request.is_json:
+            return jsonify(success=True, message="Enquiry marked as Resolved.", reload=True)
+        flash("Enquiry marked as Resolved.", "success")
+    else:
+        if request.is_json:
+            return jsonify(success=False, message="Resolution note is required."), 400
+        flash("Resolution note is required.", "danger")
+    return redirect(url_for("enquiries.index"))
+
+
+@enquiries_bp.route("/<int:enquiry_id>/not-resolved", methods=["POST"])
+@login_required
+def not_resolved(enquiry_id):
+    if current_user.role not in ("Admin", "HQ Trainee"):
+        abort(403)
+    enquiry = Enquiry.query.get_or_404(enquiry_id)
+    if enquiry.assigned_to != current_user.id and current_user.role != "Admin":
+        abort(403)
+    if enquiry.status != "In Progress":
+        flash("Enquiry must be In Progress to mark as not resolved.", "warning")
+        return redirect(url_for("enquiries.index"))
+
+    payload = request.get_json() if request.is_json else None
+    form = NotResolvedForm(data=payload) if payload else NotResolvedForm()
+    if form.validate_on_submit():
+        mark_not_resolved(enquiry, not_resolved_reason=form.not_resolved_reason.data)
+        log_activity("not_resolved", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
+        if request.is_json:
+            return jsonify(success=True, message="Enquiry marked as Not Resolved.", reload=True)
+        flash("Enquiry marked as Not Resolved.", "success")
+    else:
+        if request.is_json:
+            return jsonify(success=False, message="Reason is required."), 400
+        flash("Reason is required.", "danger")
+    return redirect(url_for("enquiries.index"))
+
+
+@enquiries_bp.route("/<int:enquiry_id>/close", methods=["POST"])
+@login_required
+def close(enquiry_id):
+    if current_user.role != "Admin":
+        abort(403)
+    enquiry = Enquiry.query.get_or_404(enquiry_id)
+    close_enquiry(enquiry, closed_by=current_user.id)
+    log_activity("closed", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
+    if request.is_json:
+        return jsonify(success=True, message="Enquiry closed.", reload=True)
+    flash("Enquiry closed.", "success")
+    return redirect(url_for("enquiries.index"))
+
+
+@enquiries_bp.route("/<int:enquiry_id>/reassign", methods=["POST"])
+@login_required
+def reassign(enquiry_id):
+    if current_user.role != "Admin":
+        abort(403)
+    enquiry = Enquiry.query.get_or_404(enquiry_id)
+    if enquiry.status != "Not Resolved":
+        flash("Only Not Resolved enquiries can be reassigned.", "warning")
+        return redirect(url_for("enquiries.index"))
+
+    form = AssignEnquiryForm()
+    form.assigned_to.choices = [(u.id, u.full_name) for u in _hq_users()]
+    if form.validate_on_submit():
+        reassign_enquiry(enquiry, assigned_to=form.assigned_to.data, assigned_by=current_user.id)
+        log_activity("reassigned", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
+        if request.is_json:
+            return jsonify(success=True, message="Enquiry reassigned.", reload=True)
+        flash("Enquiry reassigned.", "success")
+    else:
+        if request.is_json:
+            return jsonify(success=False, message="Invalid reassignment."), 400
+        flash("Invalid reassignment.", "danger")
+    return redirect(url_for("enquiries.index"))
+
+
+@enquiries_bp.route("/<int:enquiry_id>/delete", methods=["POST"])
+@login_required
+def delete(enquiry_id):
+    enquiry = Enquiry.query.get_or_404(enquiry_id)
+    if current_user.role != "Lab Trainee":
+        abort(403)
+    if enquiry.lab_id != current_user.assigned_lab_id:
+        abort(403)
+    if enquiry.status != "Open":
+        flash("Enquiry cannot be deleted once it has been assigned.", "warning")
+        return redirect(url_for("enquiries.index"))
+    label, entity_id = f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id
+    db.session.delete(enquiry)
+    db.session.commit()
+    log_activity("deleted", "enquiry", label, entity_id)
+    flash("Enquiry deleted successfully.", "success")
+    return redirect(url_for("enquiries.index"))
+
+
+@enquiries_bp.route("/<int:enquiry_id>/edit", methods=["POST"])
+@login_required
+def edit(enquiry_id):
+    if current_user.role != "Lab Trainee":
+        abort(403)
+    enquiry = Enquiry.query.get_or_404(enquiry_id)
+    if enquiry.lab_id != current_user.assigned_lab_id:
+        abort(403)
+    if enquiry.status != "Open":
+        flash("Enquiry cannot be edited once it has been assigned.", "warning")
+        return redirect(url_for("enquiries.index"))
+
+    labs = Lab.query.order_by(Lab.name).all()
+    payload = request.get_json() if request.is_json else None
+    form = EnquiryForm(data=payload) if payload else EnquiryForm()
+    form.lab_id.choices = [(lab.id, f"{lab.name} ({lab.province.name})") for lab in labs]
+
+    if form.validate_on_submit():
+        enquiry.student_name = form.student_name.data.strip()
+        enquiry.student_number = form.student_number.data.strip()
+        enquiry.category = form.category.data.strip()
+        enquiry.description = form.description.data.strip()
+        enquiry.escalation_reason = form.escalation_reason.data.strip()
+        db.session.commit()
         log_activity("updated", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
         if request.is_json:
-            return jsonify(success=True, message="Enquiry status updated successfully.", redirect=url_for("enquiries.index"))
-        flash("Enquiry status updated successfully.", "success")
-        return redirect(url_for("enquiries.index"))
-    return render_template("enquiries/update.html", form=form, enquiry=enquiry)
+            return jsonify(success=True, message="Enquiry updated successfully.", reload=True)
+        flash("Enquiry updated successfully.", "success")
+    else:
+        errors = "; ".join([f"{f}: {', '.join(m)}" for f, m in form.errors.items()])
+        if request.is_json:
+            return jsonify(success=False, message=f"Unable to update enquiry. {errors}"), 400
+        flash("Unable to update enquiry.", "danger")
+    return redirect(url_for("enquiries.index"))
 
 
 @enquiries_bp.route("/track", methods=["GET", "POST"])
@@ -107,17 +301,3 @@ def track():
         if not enquiry:
             flash("No enquiry found with that tracking number.", "danger")
     return render_template("enquiries/track.html", form=form, enquiry=enquiry)
-
-
-@enquiries_bp.route("/<int:enquiry_id>/delete", methods=["POST"])
-@login_required
-def delete(enquiry_id):
-    enquiry = Enquiry.query.get_or_404(enquiry_id)
-    if current_user.role == "Lab Trainee" and enquiry.lab_id != current_user.assigned_lab_id:
-        abort(403)
-    label, entity_id = f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id
-    db.session.delete(enquiry)
-    db.session.commit()
-    log_activity("deleted", "enquiry", label, entity_id)
-    flash("Enquiry deleted successfully.", "success")
-    return redirect(url_for("enquiries.index"))
