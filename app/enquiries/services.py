@@ -4,9 +4,22 @@ from app.models.enquiry import Enquiry
 
 
 def generate_tracking_number():
+    import re
     year = datetime.utcnow().year
-    count = Enquiry.query.filter(Enquiry.created_at >= datetime(year, 1, 1)).count() + 1
-    return f"ENQ-{year}-{count:06d}"
+    prefix = f"ENQ-{year}-"
+    last = (
+        Enquiry.query
+        .filter(Enquiry.tracking_number.like(f"{prefix}%"))
+        .order_by(Enquiry.tracking_number.desc())
+        .with_entities(Enquiry.tracking_number)
+        .first()
+    )
+    if last:
+        m = re.search(r"(\d+)$", last[0])
+        seq = int(m.group(1)) + 1 if m else 1
+    else:
+        seq = 1
+    return f"{prefix}{seq:06d}"
 
 
 def create_enquiry(student_name: str, student_number: str, category: str, description: str,
