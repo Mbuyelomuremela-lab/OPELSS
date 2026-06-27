@@ -19,6 +19,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
             {% if current_user.role == "Admin" %}
             <button class="btn btn-outline-secondary" id="enquiryAssignBtn" type="button" disabled>Assign</button>
             <button class="btn btn-outline-danger" id="enquiryCloseBtn" type="button" disabled>Close</button>
+            <button class="btn btn-outline-success" id="enquiryReopenBtn" type="button" disabled>Reopen</button>
             {% endif %}
           {% endif %}
         </div>
@@ -177,7 +178,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
             {{ form.escalation_reason(class_='form-control', rows=3, placeholder="Why can't this be resolved at lab level?") }}
           </div>
         </div>
-        {{ form.lab_id(type='hidden') }}
+        <input type="hidden" name="lab_id" id="lab_id" value="{{ current_user.assigned_lab_id or '' }}">
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -391,8 +392,10 @@ document.addEventListener("DOMContentLoaded", () => {
     {% if current_user.role == "Admin" %}
     const assignBtn = document.getElementById("enquiryAssignBtn");
     const closeBtn = document.getElementById("enquiryCloseBtn");
+    const reopenBtn = document.getElementById("enquiryReopenBtn");
     assignBtn.disabled = !(status === "Open" || status === "Not Resolved");
-    closeBtn.disabled = false;
+    closeBtn.disabled = status === "Closed";
+    reopenBtn.disabled = status !== "Closed";
     {% endif %}
   });
 
@@ -464,6 +467,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!selected || !confirm(`Close enquiry "${selected.dataset.tracking}"?`)) return;
     const form = document.getElementById("enquiryCloseForm");
     form.action = `/enquiries/${selected.dataset.id}/close`;
+    form.submit();
+  });
+
+  // ── Reopen ──
+  document.getElementById("enquiryReopenBtn")?.addEventListener("click", () => {
+    if (!selected || !confirm(`Reopen enquiry "${selected.dataset.tracking}"?`)) return;
+    const form = document.getElementById("enquiryCloseForm");
+    form.action = `/enquiries/${selected.dataset.id}/reopen`;
     form.submit();
   });
   {% endif %}
