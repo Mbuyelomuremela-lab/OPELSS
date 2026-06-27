@@ -79,7 +79,7 @@ def _ensure_runtime_schema_columns(app: Flask) -> None:
                 else:
                     rows = conn.exec_driver_sql(
                         "SELECT column_name FROM information_schema.columns "
-                        "WHERE table_name = :t", {"t": table}
+                        f"WHERE table_name = '{table}'"
                     ).fetchall()
                     return {row[0] for row in rows}
 
