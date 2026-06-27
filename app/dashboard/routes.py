@@ -24,7 +24,9 @@ def home():
         visitor_count = Visitor.query.count()
         enquiry_count = Enquiry.query.count()
         programme_count = Programme.query.count()
-        escalated_count = Enquiry.query.filter_by(escalated=True).count()
+        escalated_count = Enquiry.query.filter(
+            Enquiry.status.in_(["Open", "Assigned", "In Progress", "Not Resolved"])
+        ).count()
 
         return render_template(
             "dashboard/admin_hq_dashboard.html",

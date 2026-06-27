@@ -1,49 +1,91 @@
 {% extends "base.html" %} {% block title %}Enquiries – OPELSS{% endblock %} {% block
 header_title %}Enquiry Management{% endblock %} {% block content %}
 <div class="row g-4">
-  <div class="col-lg-5">
+
+  {# ── LEFT PANEL: Submit form (Lab Trainee only) ── #}
+  {% if current_user.role == "Lab Trainee" %}
+  <div class="col-lg-4">
     <div class="card rounded-4 shadow-sm p-4">
-      <h5>New Enquiry</h5>
-      <form
-        method="post"
-        action="{{ url_for('enquiries.create') }}"
-        data-ajax="true"
-        data-refresh-target="#enquiriesTableBody"
-      >
+      <h5 class="mb-3">New Enquiry</h5>
+      <form method="post" action="{{ url_for('enquiries.create') }}" id="enquiryCreateForm" data-ajax="true">
         {{ form.hidden_tag() }}
         <div class="mb-3">
-          {{ form.student_name.label(class_='form-label') }}{{
-          form.student_name(class_='form-control') }}
+          {{ form.student_name.label(class_='form-label') }}
+          {{ form.student_name(class_='form-control') }}
         </div>
         <div class="mb-3">
-          {{ form.student_number.label(class_='form-label') }}{{
-          form.student_number(class_='form-control') }}
+          {{ form.student_number.label(class_='form-label') }}
+          {{ form.student_number(class_='form-control') }}
         </div>
         <div class="mb-3">
-          {{ form.category.label(class_='form-label') }}{{
-          form.category(class_='form-control') }}
+          {{ form.category.label(class_='form-label') }}
+          {{ form.category(class_='form-control') }}
         </div>
         <div class="mb-3">
-          {{ form.description.label(class_='form-label') }}{{
-          form.description(class_='form-control', rows=4) }}
+          {{ form.description.label(class_='form-label') }}
+          {{ form.description(class_='form-control', rows=3) }}
         </div>
         <div class="mb-3">
-          {{ form.lab_id.label(class_='form-label') }}{{
-          form.lab_id(class_='form-select') }}
+          {{ form.escalation_reason.label(class_='form-label') }}
+          {{ form.escalation_reason(class_='form-control', rows=3, placeholder='Why can\'t this be resolved at lab level?') }}
         </div>
         {{ form.submit(class_='btn btn-warning w-100 text-white') }}
       </form>
     </div>
   </div>
-  <div class="col-lg-7">
+  <div class="col-lg-8">
+  {% else %}
+  <div class="col-12">
+  {% endif %}
+
     <div class="card rounded-4 shadow-sm p-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">Enquiry Records</h5>
         <div class="d-flex gap-2">
-          <button class="btn btn-outline-primary" id="enquiryUpdateBtn" type="button" disabled>Update</button>
-          <button class="btn btn-outline-danger" id="enquiryDeleteBtn" type="button" disabled>Delete</button>
+          {% if current_user.role == "Lab Trainee" %}
+            <button class="btn btn-outline-primary" id="enquiryEditBtn" type="button" disabled>Edit</button>
+            <button class="btn btn-outline-danger" id="enquiryDeleteBtn" type="button" disabled>Delete</button>
+          {% endif %}
+          {% if current_user.role in ["Admin", "HQ Trainee"] %}
+            <button class="btn btn-outline-primary" id="enquiryActionBtn" type="button" disabled>Action</button>
+            {% if current_user.role == "Admin" %}
+            <button class="btn btn-outline-secondary" id="enquiryAssignBtn" type="button" disabled>Assign</button>
+            <button class="btn btn-outline-danger" id="enquiryCloseBtn" type="button" disabled>Close</button>
+            {% endif %}
+          {% endif %}
         </div>
       </div>
+
+      {# ── Filters ── #}
+      <div class="mb-3">
+        <form id="enquiryFiltersForm" method="get" class="row g-2 align-items-end">
+          <div class="col-auto">
+            <label class="form-label small">Status</label>
+            <select name="status" class="form-select form-select-sm">
+              <option value="">All</option>
+              {% for s in ["Open","Assigned","In Progress","Resolved","Not Resolved","Closed"] %}
+              <option value="{{ s }}" {% if request.args.get('status') == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% if current_user.role in ["Admin", "HQ Trainee"] %}
+          <div class="col-auto">
+            <label class="form-label small">Lab</label>
+            <select name="lab_id" class="form-select form-select-sm">
+              <option value="">All Labs</option>
+              {% for lab in labs %}
+              <option value="{{ lab.id }}" {% if request.args.get('lab_id')|int == lab.id %}selected{% endif %}>{{ lab.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <div class="col-auto">
+            <button class="btn btn-secondary btn-sm" type="submit">Filter</button>
+            <a class="btn btn-link btn-sm" href="{{ url_for('enquiries.index') }}">Reset</a>
+          </div>
+        </form>
+      </div>
+
       <div class="table-responsive">
         <table class="table table-hover align-middle selectable-table" id="enquiriesTable">
           <thead>
@@ -53,26 +95,50 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
               <th>Category</th>
               <th>Status</th>
               <th>Lab</th>
-              <th>Escalated</th>
-              <th>Action</th>
+              {% if current_user.role in ["Admin", "HQ Trainee"] %}
+              <th>Assigned To</th>
+              {% endif %}
             </tr>
           </thead>
           <tbody id="enquiriesTableBody">
+            {% set status_filter = request.args.get('status', '') %}
+            {% set lab_filter = request.args.get('lab_id', '')|int %}
             {% for enquiry in enquiries %}
-            <tr data-id="{{ enquiry.id }}" data-tracking="{{ enquiry.tracking_number }}">
+            {% if (not status_filter or enquiry.status == status_filter) and (not lab_filter or enquiry.lab_id == lab_filter) %}
+            <tr
+              data-id="{{ enquiry.id }}"
+              data-tracking="{{ enquiry.tracking_number }}"
+              data-student="{{ enquiry.student_name }}"
+              data-student-number="{{ enquiry.student_number }}"
+              data-category="{{ enquiry.category }}"
+              data-description="{{ enquiry.description }}"
+              data-escalation-reason="{{ enquiry.escalation_reason or '' }}"
+              data-status="{{ enquiry.status }}"
+              data-assigned-to="{{ enquiry.assigned_to or '' }}"
+            >
               <td>{{ enquiry.tracking_number }}</td>
               <td>{{ enquiry.student_name }}</td>
               <td>{{ enquiry.category }}</td>
-              <td>{{ enquiry.status }}</td>
+              <td>
+                {% set badge = {
+                  'Open': 'bg-primary',
+                  'Assigned': 'bg-info text-dark',
+                  'In Progress': 'bg-warning text-dark',
+                  'Resolved': 'bg-success',
+                  'Not Resolved': 'bg-danger',
+                  'Closed': 'bg-secondary'
+                } %}
+                <span class="badge {{ badge.get(enquiry.status, 'bg-secondary') }}">{{ enquiry.status }}</span>
+              </td>
               <td>{{ enquiry.lab.name }}</td>
-              <td>{{ 'Yes' if enquiry.escalated else 'No' }}</td>
-              <td><span class="text-muted">Select row above</span></td>
+              {% if current_user.role in ["Admin", "HQ Trainee"] %}
+              <td>{{ enquiry.assignee.full_name if enquiry.assignee else '—' }}</td>
+              {% endif %}
             </tr>
+            {% endif %}
             {% else %}
             <tr>
-              <td colspan="7" class="text-center text-muted">
-                No enquiries logged yet.
-              </td>
+              <td colspan="6" class="text-center text-muted">No enquiries found.</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -81,32 +147,291 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
     </div>
   </div>
 </div>
-<form id="enquiryDeleteForm" method="post" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /></form>
+
+{# ── Lab Trainee: Edit Modal ── #}
+{% if current_user.role == "Lab Trainee" %}
+<div class="modal fade" id="enquiryEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <form id="enquiryEditForm" method="post" data-ajax="true">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Enquiry</h5>
+        <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="mb-3"><label class="form-label">Student Name</label><input type="text" name="student_name" id="editStudentName" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Student Number</label><input type="text" name="student_number" id="editStudentNumber" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Category</label><input type="text" name="category" id="editCategory" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Description</label><textarea name="description" id="editDescription" class="form-control" rows="3" required></textarea></div>
+        <div class="mb-3"><label class="form-label">Reason for Escalation</label><textarea name="escalation_reason" id="editEscalationReason" class="form-control" rows="3" required></textarea></div>
+        {# hidden lab_id required by form validation #}
+        <input type="hidden" name="lab_id" value="{{ current_user.assigned_lab_id }}">
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Save Changes</button></div>
+    </form>
+  </div></div>
+</div>
+{% endif %}
+
+{# ── Admin: Assign Modal ── #}
+{% if current_user.role == "Admin" %}
+<div class="modal fade" id="enquiryAssignModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <form id="enquiryAssignForm" method="post" data-ajax="true">
+      <div class="modal-header">
+        <h5 class="modal-title">Assign Enquiry</h5>
+        <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <p class="text-muted small mb-3" id="assignEnquiryInfo"></p>
+        <div class="mb-3">
+          {{ assign_form.assigned_to.label(class_='form-label') }}
+          {{ assign_form.assigned_to(class_='form-select') }}
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Assign</button></div>
+    </form>
+  </div></div>
+</div>
+{% endif %}
+
+{# ── HQ/Admin: Action Modal (In Progress / Resolve / Not Resolved) ── #}
+{% if current_user.role in ["Admin", "HQ Trainee"] %}
+<div class="modal fade" id="enquiryActionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title" id="actionModalTitle">Update Enquiry</h5>
+      <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted small" id="actionEnquiryInfo"></p>
+
+      {# Start Progress #}
+      <form id="startProgressForm" method="post" data-ajax="true" class="d-none">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <p>Mark this enquiry as <strong>In Progress</strong>?</p>
+        <button class="btn btn-warning w-100" type="submit">Start Handling</button>
+      </form>
+
+      {# Resolve #}
+      <form id="resolveForm" method="post" data-ajax="true" class="d-none">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="mb-3">
+          {{ resolve_form.resolution_note.label(class_='form-label') }}
+          {{ resolve_form.resolution_note(class_='form-control', rows=4) }}
+        </div>
+        <button class="btn btn-success w-100" type="submit">Mark Resolved</button>
+      </form>
+
+      {# Not Resolved #}
+      <form id="notResolvedForm" method="post" data-ajax="true" class="d-none">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="mb-3">
+          {{ not_resolved_form.not_resolved_reason.label(class_='form-label') }}
+          {{ not_resolved_form.not_resolved_reason(class_='form-control', rows=4) }}
+        </div>
+        <button class="btn btn-danger w-100" type="submit">Mark Not Resolved</button>
+      </form>
+    </div>
+  </div></div>
+</div>
+{% endif %}
+
+{# ── Delete form ── #}
+<form id="enquiryDeleteForm" method="post" class="d-none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+</form>
+
+{# ── Close form ── #}
+{% if current_user.role == "Admin" %}
+<form id="enquiryCloseForm" method="post" class="d-none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+</form>
+{% endif %}
+
+{# ── Tracking number confirmation modal (after submit) ── #}
+<div class="modal fade" id="trackingConfirmModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-4">
+      <div class="mb-3">
+        <i class="fa fa-check-circle fa-3x text-success"></i>
+      </div>
+      <h5 class="mb-2">Enquiry Submitted & Escalated</h5>
+      <p class="text-muted mb-1">Share this reference number with the student:</p>
+      <div class="bg-light rounded p-3 mb-3">
+        <code class="fs-4 fw-bold text-dark" id="confirmTrackingNumber"></code>
+      </div>
+      <p class="text-muted small" id="confirmStudentName"></p>
+      <button class="btn btn-warning text-white w-100" data-bs-dismiss="modal">Done</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const table = document.getElementById("enquiriesTable");
-    const updateBtn = document.getElementById("enquiryUpdateBtn");
+document.addEventListener("DOMContentLoaded", () => {
+  const table = document.getElementById("enquiriesTable");
+  let selected = null;
+
+  // ── Row selection ──
+  table?.addEventListener("click", (event) => {
+    const row = event.target.closest("tr[data-id]");
+    if (!row || !table.contains(row)) return;
+    table.querySelectorAll("tbody tr").forEach(r => r.classList.remove("table-row-selected"));
+    row.classList.add("table-row-selected");
+    selected = row;
+
+    const status = row.dataset.status;
+    const assignedTo = row.dataset.assignedTo;
+
+    {% if current_user.role == "Lab Trainee" %}
+    const editBtn = document.getElementById("enquiryEditBtn");
     const deleteBtn = document.getElementById("enquiryDeleteBtn");
-    let selected = null;
-    table?.addEventListener("click", (event) => {
-      const row = event.target.closest("tr[data-id]");
-      if (!row || !table.contains(row)) return;
-      table.querySelectorAll("tbody tr").forEach((r) => r.classList.remove("table-row-selected"));
-      row.classList.add("table-row-selected");
-      selected = row;
-      updateBtn.disabled = false;
-      deleteBtn.disabled = false;
+    const canModify = status === "Open";
+    editBtn.disabled = !canModify;
+    deleteBtn.disabled = !canModify;
+    {% endif %}
+
+    {% if current_user.role in ["Admin", "HQ Trainee"] %}
+    const actionBtn = document.getElementById("enquiryActionBtn");
+    const canAction = (status === "Assigned" && assignedTo === "{{ current_user.id }}")
+                   || (status === "In Progress" && (assignedTo === "{{ current_user.id }}" {% if current_user.role == "Admin" %} || true {% endif %}))
+                   {% if current_user.role == "Admin" %}|| status === "Assigned"{% endif %};
+    actionBtn.disabled = !canAction;
+    {% endif %}
+
+    {% if current_user.role == "Admin" %}
+    const assignBtn = document.getElementById("enquiryAssignBtn");
+    const closeBtn = document.getElementById("enquiryCloseBtn");
+    assignBtn.disabled = !(status === "Open" || status === "Not Resolved");
+    closeBtn.disabled = false;
+    {% endif %}
+  });
+
+  {% if current_user.role == "Lab Trainee" %}
+  // ── Edit ──
+  document.getElementById("enquiryEditBtn")?.addEventListener("click", () => {
+    if (!selected) return;
+    document.getElementById("editStudentName").value = selected.dataset.student;
+    document.getElementById("editStudentNumber").value = selected.dataset.studentNumber;
+    document.getElementById("editCategory").value = selected.dataset.category;
+    document.getElementById("editDescription").value = selected.dataset.description;
+    document.getElementById("editEscalationReason").value = selected.dataset.escalationReason;
+    document.getElementById("enquiryEditForm").action = `/enquiries/${selected.dataset.id}/edit`;
+    new bootstrap.Modal(document.getElementById("enquiryEditModal")).show();
+  });
+
+  // ── Delete ──
+  document.getElementById("enquiryDeleteBtn")?.addEventListener("click", () => {
+    if (!selected || !confirm(`Delete enquiry "${selected.dataset.tracking}"?`)) return;
+    const form = document.getElementById("enquiryDeleteForm");
+    form.action = `/enquiries/${selected.dataset.id}/delete`;
+    form.submit();
+  });
+
+  // ── Submit & Escalate confirmation modal ──
+  const createForm = document.getElementById("enquiryCreateForm");
+  createForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const formData = new FormData(createForm);
+    const obj = {};
+    formData.forEach((v, k) => obj[k] = v);
+    try {
+      const resp = await fetch(createForm.action, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+        body: JSON.stringify(obj),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        document.getElementById("confirmTrackingNumber").textContent = data.tracking_number;
+        document.getElementById("confirmStudentName").textContent = `Student: ${data.student_name}`;
+        new bootstrap.Modal(document.getElementById("trackingConfirmModal")).show();
+        createForm.reset();
+        if (data.reload) setTimeout(() => location.reload(), 2500);
+      } else {
+        alert(data.message || "Failed to submit enquiry.");
+      }
+    } catch {
+      alert("An error occurred. Please try again.");
+    }
+  });
+  {% endif %}
+
+  {% if current_user.role == "Admin" %}
+  // ── Assign ──
+  document.getElementById("enquiryAssignBtn")?.addEventListener("click", () => {
+    if (!selected) return;
+    document.getElementById("assignEnquiryInfo").textContent =
+      `${selected.dataset.tracking} — ${selected.dataset.student}`;
+    const isReassign = selected.dataset.status === "Not Resolved";
+    document.getElementById("enquiryAssignForm").action =
+      `/enquiries/${selected.dataset.id}/${isReassign ? "reassign" : "assign"}`;
+    new bootstrap.Modal(document.getElementById("enquiryAssignModal")).show();
+  });
+
+  // ── Close ──
+  document.getElementById("enquiryCloseBtn")?.addEventListener("click", () => {
+    if (!selected || !confirm(`Close enquiry "${selected.dataset.tracking}"?`)) return;
+    const form = document.getElementById("enquiryCloseForm");
+    form.action = `/enquiries/${selected.dataset.id}/close`;
+    form.submit();
+  });
+  {% endif %}
+
+  {% if current_user.role in ["Admin", "HQ Trainee"] %}
+  // ── Action modal ──
+  document.getElementById("enquiryActionBtn")?.addEventListener("click", () => {
+    if (!selected) return;
+    const status = selected.dataset.status;
+    document.getElementById("actionEnquiryInfo").textContent =
+      `${selected.dataset.tracking} — ${selected.dataset.student}`;
+
+    // Hide all sub-forms first
+    ["startProgressForm","resolveForm","notResolvedForm"].forEach(id => {
+      document.getElementById(id).classList.add("d-none");
     });
-    updateBtn?.addEventListener("click", () => {
-      if (!selected) return;
-      window.location.href = `/enquiries/update/${selected.dataset.id}`;
-    });
-    deleteBtn?.addEventListener("click", () => {
-      if (!selected || !confirm(`Delete enquiry "${selected.dataset.tracking}"?`)) return;
-      const form = document.getElementById("enquiryDeleteForm");
-      form.action = `/enquiries/${selected.dataset.id}/delete`;
-      form.submit();
+
+    if (status === "Assigned") {
+      document.getElementById("actionModalTitle").textContent = "Start Handling";
+      document.getElementById("startProgressForm").classList.remove("d-none");
+      document.getElementById("startProgressForm").action = `/enquiries/${selected.dataset.id}/start`;
+    } else if (status === "In Progress") {
+      document.getElementById("actionModalTitle").textContent = "Update Outcome";
+      document.getElementById("resolveForm").classList.remove("d-none");
+      document.getElementById("notResolvedForm").classList.remove("d-none");
+      document.getElementById("resolveForm").action = `/enquiries/${selected.dataset.id}/resolve`;
+      document.getElementById("notResolvedForm").action = `/enquiries/${selected.dataset.id}/not-resolved`;
+    }
+    new bootstrap.Modal(document.getElementById("enquiryActionModal")).show();
+  });
+  {% endif %}
+
+  // ── AJAX for assign/resolve/not-resolved/edit/start forms ──
+  document.querySelectorAll("form[data-ajax='true']:not(#enquiryCreateForm)").forEach(form => {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const obj = {};
+      formData.forEach((v, k) => obj[k] = v);
+      try {
+        const resp = await fetch(form.action, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+          body: JSON.stringify(obj),
+        });
+        const data = await resp.json();
+        if (data.success) {
+          bootstrap.Modal.getInstance(form.closest(".modal"))?.hide();
+          if (data.reload) location.reload();
+        } else {
+          alert(data.message || "An error occurred.");
+        }
+      } catch {
+        alert("An error occurred. Please try again.");
+      }
     });
   });
+});
 </script>
 {% endblock %}
