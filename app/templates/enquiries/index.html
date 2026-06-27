@@ -15,6 +15,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
             <button class="btn btn-outline-danger" id="enquiryDeleteBtn" type="button" disabled>Delete</button>
           {% endif %}
           {% if current_user.role in ["Admin", "HQ Trainee"] %}
+            <button class="btn btn-outline-info" id="enquiryViewBtn" type="button" disabled>View Details</button>
             <button class="btn btn-outline-primary" id="enquiryActionBtn" type="button" disabled>Action</button>
             {% if current_user.role == "Admin" %}
             <button class="btn btn-outline-secondary" id="enquiryAssignBtn" type="button" disabled>Assign</button>
@@ -80,10 +81,19 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
               data-student="{{ enquiry.student_name }}"
               data-student-number="{{ enquiry.student_number }}"
               data-category="{{ enquiry.category }}"
-              data-description="{{ enquiry.description }}"
-              data-escalation-reason="{{ enquiry.escalation_reason or '' }}"
+              data-description="{{ enquiry.description | e }}"
+              data-escalation-reason="{{ enquiry.escalation_reason or '' | e }}"
+              data-resolution-note="{{ enquiry.resolution_note or '' | e }}"
+              data-not-resolved-reason="{{ enquiry.not_resolved_reason or '' | e }}"
               data-status="{{ enquiry.status }}"
+              data-lab="{{ enquiry.lab.name }}"
+              data-assignee="{{ enquiry.assignee.full_name if enquiry.assignee else '' }}"
               data-assigned-to="{{ enquiry.assigned_to or '' }}"
+              data-created="{{ enquiry.created_at.strftime('%Y-%m-%d %H:%M') if enquiry.created_at else '' }}"
+              data-assigned-at="{{ enquiry.assigned_at.strftime('%Y-%m-%d %H:%M') if enquiry.assigned_at else '' }}"
+              data-in-progress-at="{{ enquiry.in_progress_at.strftime('%Y-%m-%d %H:%M') if enquiry.in_progress_at else '' }}"
+              data-resolved-at="{{ enquiry.resolved_at.strftime('%Y-%m-%d %H:%M') if enquiry.resolved_at else '' }}"
+              data-closed-at="{{ enquiry.closed_at.strftime('%Y-%m-%d %H:%M') if enquiry.closed_at else '' }}"
             >
               <td>{{ enquiry.tracking_number }}</td>
               <td>{{ enquiry.student_name }}</td>
@@ -285,6 +295,69 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
 </div>
 {% endif %}
 
+{# ── HQ/Admin: Enquiry Detail Modal ── #}
+{% if current_user.role in ["Admin", "HQ Trainee"] %}
+<div class="modal fade" id="enquiryDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">Enquiry Details — <span id="detailTracking"></span></h5>
+      <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <p class="mb-1 text-muted small">Student Name</p>
+          <p class="fw-semibold" id="detailStudent"></p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1 text-muted small">Student Number</p>
+          <p class="fw-semibold" id="detailStudentNumber"></p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1 text-muted small">Category</p>
+          <p id="detailCategory"></p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1 text-muted small">Status</p>
+          <p id="detailStatus"></p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1 text-muted small">Lab</p>
+          <p id="detailLab"></p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1 text-muted small">Assigned To</p>
+          <p id="detailAssignee"></p>
+        </div>
+        <div class="col-12">
+          <p class="mb-1 text-muted small">Description</p>
+          <p id="detailDescription" class="border rounded p-2 bg-light" style="white-space:pre-wrap"></p>
+        </div>
+        <div class="col-12">
+          <p class="mb-1 text-muted small">Reason for Escalation</p>
+          <p id="detailEscalation" class="border rounded p-2 bg-light" style="white-space:pre-wrap"></p>
+        </div>
+        <div id="detailResolutionWrap" class="col-12 d-none">
+          <p class="mb-1 text-muted small">Resolution Note</p>
+          <p id="detailResolution" class="border rounded p-2 bg-light text-success" style="white-space:pre-wrap"></p>
+        </div>
+        <div id="detailNotResolvedWrap" class="col-12 d-none">
+          <p class="mb-1 text-muted small">Not Resolved Reason</p>
+          <p id="detailNotResolved" class="border rounded p-2 bg-light text-danger" style="white-space:pre-wrap"></p>
+        </div>
+        <div class="col-12">
+          <p class="mb-1 text-muted small">Timeline</p>
+          <ul class="list-unstyled small text-muted" id="detailTimeline"></ul>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+    </div>
+  </div></div>
+</div>
+{% endif %}
+
 {# ── HQ/Admin: Action Modal (In Progress / Resolve / Not Resolved) ── #}
 {% if current_user.role in ["Admin", "HQ Trainee"] %}
 <div class="modal fade" id="enquiryActionModal" tabindex="-1" aria-hidden="true">
@@ -382,6 +455,7 @@ document.addEventListener("DOMContentLoaded", () => {
     {% endif %}
 
     {% if current_user.role in ["Admin", "HQ Trainee"] %}
+    document.getElementById("enquiryViewBtn").disabled = false;
     const actionBtn = document.getElementById("enquiryActionBtn");
     const canAction = (status === "Assigned" && assignedTo === "{{ current_user.id }}")
                    || (status === "In Progress" && (assignedTo === "{{ current_user.id }}" {% if current_user.role == "Admin" %} || true {% endif %}))
@@ -447,6 +521,49 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch {
       alert("An error occurred. Please try again.");
     }
+  });
+  {% endif %}
+
+  {% if current_user.role in ["Admin", "HQ Trainee"] %}
+  // ── View Details ──
+  document.getElementById("enquiryViewBtn")?.addEventListener("click", () => {
+    if (!selected) return;
+    const d = selected.dataset;
+    const statusBadges = {
+      "Open": "bg-primary", "Assigned": "bg-info text-dark",
+      "In Progress": "bg-warning text-dark", "Resolved": "bg-success",
+      "Not Resolved": "bg-danger", "Closed": "bg-secondary"
+    };
+    document.getElementById("detailTracking").textContent = d.tracking;
+    document.getElementById("detailStudent").textContent = d.student;
+    document.getElementById("detailStudentNumber").textContent = d.studentNumber;
+    document.getElementById("detailCategory").textContent = d.category;
+    document.getElementById("detailStatus").innerHTML = `<span class="badge ${statusBadges[d.status] || 'bg-secondary'}">${d.status}</span>`;
+    document.getElementById("detailLab").textContent = d.lab || "—";
+    document.getElementById("detailAssignee").textContent = d.assignee || "—";
+    document.getElementById("detailDescription").textContent = d.description;
+    document.getElementById("detailEscalation").textContent = d.escalationReason || "—";
+
+    const resWrap = document.getElementById("detailResolutionWrap");
+    const notResWrap = document.getElementById("detailNotResolvedWrap");
+    if (d.resolutionNote) {
+      document.getElementById("detailResolution").textContent = d.resolutionNote;
+      resWrap.classList.remove("d-none");
+    } else { resWrap.classList.add("d-none"); }
+    if (d.notResolvedReason) {
+      document.getElementById("detailNotResolved").textContent = d.notResolvedReason;
+      notResWrap.classList.remove("d-none");
+    } else { notResWrap.classList.add("d-none"); }
+
+    const timeline = [];
+    if (d.created)      timeline.push(`📋 Submitted: ${d.created}`);
+    if (d.assignedAt)   timeline.push(`👤 Assigned: ${d.assignedAt}`);
+    if (d.inProgressAt) timeline.push(`⚙️ In Progress: ${d.inProgressAt}`);
+    if (d.resolvedAt)   timeline.push(`✅ Resolved/Not Resolved: ${d.resolvedAt}`);
+    if (d.closedAt)     timeline.push(`🔒 Closed: ${d.closedAt}`);
+    document.getElementById("detailTimeline").innerHTML = timeline.map(t => `<li>${t}</li>`).join("") || "<li>No timeline events yet.</li>";
+
+    new bootstrap.Modal(document.getElementById("enquiryDetailModal")).show();
   });
   {% endif %}
 

@@ -1,6 +1,5 @@
 from flask import render_template, redirect, url_for, flash, request, abort, jsonify
 from flask_login import login_required, current_user
-from werkzeug.datastructures import ImmutableMultiDict
 from app.enquiries import enquiries_bp
 from app.enquiries.forms import (
     EnquiryForm, AssignEnquiryForm, ResolveEnquiryForm, NotResolvedForm, TrackingForm
@@ -23,16 +22,15 @@ def _hq_users():
     ).order_by(User.full_name).all()
 
 
-def _json_form(FormClass, **overrides):
-    """Build a WTForms form from a JSON request body so field validators work correctly.
+def _json_str(data, key):
+    return (data.get(key) or "").strip()
 
-    Flask-WTF uses request.form as formdata; for JSON requests it is empty, so
-    fields populated via data= kwargs get cleared before validation. Wrapping the
-    JSON payload in an ImmutableMultiDict makes WTForms treat it like a normal
-    HTML form submission.
-    """
-    payload = {**(request.get_json() or {}), **overrides}
-    return FormClass(ImmutableMultiDict(list(payload.items())))
+
+def _json_int(data, key):
+    try:
+        return int(data.get(key))
+    except (TypeError, ValueError):
+        return None
 
 
 @enquiries_bp.route("/")
@@ -74,14 +72,49 @@ def index():
 def create():
     if current_user.role != "Lab Trainee":
         abort(403)
+    if not current_user.assigned_lab_id:
+        if request.is_json:
+            return jsonify(success=False, message="No lab is assigned to your account."), 400
+        flash("No lab is assigned to your account.", "warning")
+        return redirect(url_for("enquiries.index"))
+
+    if request.is_json:
+        data = request.get_json() or {}
+        student_name = _json_str(data, "student_name")
+        student_number = _json_str(data, "student_number")
+        category = _json_str(data, "category")
+        description = _json_str(data, "description")
+        escalation_reason = _json_str(data, "escalation_reason")
+
+        errors = []
+        if not student_name:      errors.append("Student name is required")
+        if not student_number:    errors.append("Student number is required")
+        if not category:          errors.append("Category is required")
+        if not description:       errors.append("Description is required")
+        if not escalation_reason: errors.append("Escalation reason is required")
+        if errors:
+            return jsonify(success=False, message="; ".join(errors)), 400
+
+        enquiry = create_enquiry(
+            student_name=student_name,
+            student_number=student_number,
+            category=category,
+            description=description,
+            lab_id=current_user.assigned_lab_id,
+            escalation_reason=escalation_reason,
+        )
+        log_activity("created", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
+        return jsonify(
+            success=True,
+            message="Enquiry submitted and escalated to HQ.",
+            tracking_number=enquiry.tracking_number,
+            student_name=enquiry.student_name,
+            reload=True,
+        )
 
     labs = Lab.query.order_by(Lab.name).all()
-    if request.is_json:
-        form = _json_form(EnquiryForm, lab_id=str(current_user.assigned_lab_id or ""))
-    else:
-        form = EnquiryForm()
+    form = EnquiryForm()
     form.lab_id.choices = [(lab.id, f"{lab.name} ({lab.province.name})") for lab in labs]
-
     if form.validate_on_submit():
         enquiry = create_enquiry(
             student_name=form.student_name.data,
@@ -92,19 +125,8 @@ def create():
             escalation_reason=form.escalation_reason.data,
         )
         log_activity("created", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
-        if request.is_json:
-            return jsonify(
-                success=True,
-                message="Enquiry submitted and escalated to HQ.",
-                tracking_number=enquiry.tracking_number,
-                student_name=enquiry.student_name,
-                reload=True,
-            )
         flash(f"Enquiry {enquiry.tracking_number} submitted and escalated to HQ.", "success")
     else:
-        errors = "; ".join([f"{f}: {', '.join(m)}" for f, m in form.errors.items()])
-        if request.is_json:
-            return jsonify(success=False, message=f"Unable to submit enquiry. {errors}"), 400
         flash("Unable to submit enquiry. Please check the form.", "danger")
     return redirect(url_for("enquiries.index"))
 
@@ -121,18 +143,22 @@ def assign(enquiry_id):
         flash("This enquiry cannot be assigned at its current status.", "warning")
         return redirect(url_for("enquiries.index"))
 
-    form = _json_form(AssignEnquiryForm) if request.is_json else AssignEnquiryForm()
+    if request.is_json:
+        data = request.get_json() or {}
+        assigned_to = _json_int(data, "assigned_to")
+        if not assigned_to:
+            return jsonify(success=False, message="Please select a person to assign to."), 400
+        assign_enquiry(enquiry, assigned_to=assigned_to, assigned_by=current_user.id)
+        log_activity("assigned", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
+        return jsonify(success=True, message="Enquiry assigned successfully.", reload=True)
+
+    form = AssignEnquiryForm()
     form.assigned_to.choices = [(u.id, u.full_name) for u in _hq_users()]
     if form.validate_on_submit():
         assign_enquiry(enquiry, assigned_to=form.assigned_to.data, assigned_by=current_user.id)
         log_activity("assigned", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
-        if request.is_json:
-            return jsonify(success=True, message="Enquiry assigned successfully.", reload=True)
         flash("Enquiry assigned successfully.", "success")
     else:
-        errors = "; ".join([f"{f}: {', '.join(m)}" for f, m in form.errors.items()])
-        if request.is_json:
-            return jsonify(success=False, message=f"Invalid assignment. {errors}"), 400
         flash("Invalid assignment.", "danger")
     return redirect(url_for("enquiries.index"))
 
@@ -147,7 +173,7 @@ def start(enquiry_id):
         abort(403)
     if enquiry.status != "Assigned":
         if request.is_json:
-            return jsonify(success=False, message="Enquiry must be in Assigned status to start."), 400
+            return jsonify(success=False, message="Enquiry must be Assigned before starting."), 400
         flash("Enquiry must be in Assigned status to start.", "warning")
         return redirect(url_for("enquiries.index"))
     start_progress(enquiry)
@@ -172,16 +198,21 @@ def resolve(enquiry_id):
         flash("Enquiry must be In Progress to resolve.", "warning")
         return redirect(url_for("enquiries.index"))
 
-    form = _json_form(ResolveEnquiryForm) if request.is_json else ResolveEnquiryForm()
+    if request.is_json:
+        data = request.get_json() or {}
+        note = _json_str(data, "resolution_note")
+        if not note:
+            return jsonify(success=False, message="Resolution note is required."), 400
+        resolve_enquiry(enquiry, resolution_note=note)
+        log_activity("resolved", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
+        return jsonify(success=True, message="Enquiry marked as Resolved.", reload=True)
+
+    form = ResolveEnquiryForm()
     if form.validate_on_submit():
         resolve_enquiry(enquiry, resolution_note=form.resolution_note.data)
         log_activity("resolved", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
-        if request.is_json:
-            return jsonify(success=True, message="Enquiry marked as Resolved.", reload=True)
         flash("Enquiry marked as Resolved.", "success")
     else:
-        if request.is_json:
-            return jsonify(success=False, message="Resolution note is required."), 400
         flash("Resolution note is required.", "danger")
     return redirect(url_for("enquiries.index"))
 
@@ -200,16 +231,21 @@ def not_resolved(enquiry_id):
         flash("Enquiry must be In Progress to mark as not resolved.", "warning")
         return redirect(url_for("enquiries.index"))
 
-    form = _json_form(NotResolvedForm) if request.is_json else NotResolvedForm()
+    if request.is_json:
+        data = request.get_json() or {}
+        reason = _json_str(data, "not_resolved_reason")
+        if not reason:
+            return jsonify(success=False, message="Reason is required."), 400
+        mark_not_resolved(enquiry, not_resolved_reason=reason)
+        log_activity("not_resolved", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
+        return jsonify(success=True, message="Enquiry marked as Not Resolved.", reload=True)
+
+    form = NotResolvedForm()
     if form.validate_on_submit():
         mark_not_resolved(enquiry, not_resolved_reason=form.not_resolved_reason.data)
         log_activity("not_resolved", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
-        if request.is_json:
-            return jsonify(success=True, message="Enquiry marked as Not Resolved.", reload=True)
         flash("Enquiry marked as Not Resolved.", "success")
     else:
-        if request.is_json:
-            return jsonify(success=False, message="Reason is required."), 400
         flash("Reason is required.", "danger")
     return redirect(url_for("enquiries.index"))
 
@@ -262,17 +298,22 @@ def reassign(enquiry_id):
         flash("Only Not Resolved enquiries can be reassigned.", "warning")
         return redirect(url_for("enquiries.index"))
 
-    form = _json_form(AssignEnquiryForm) if request.is_json else AssignEnquiryForm()
+    if request.is_json:
+        data = request.get_json() or {}
+        assigned_to = _json_int(data, "assigned_to")
+        if not assigned_to:
+            return jsonify(success=False, message="Please select a person to reassign to."), 400
+        reassign_enquiry(enquiry, assigned_to=assigned_to, assigned_by=current_user.id)
+        log_activity("reassigned", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
+        return jsonify(success=True, message="Enquiry reassigned.", reload=True)
+
+    form = AssignEnquiryForm()
     form.assigned_to.choices = [(u.id, u.full_name) for u in _hq_users()]
     if form.validate_on_submit():
         reassign_enquiry(enquiry, assigned_to=form.assigned_to.data, assigned_by=current_user.id)
         log_activity("reassigned", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
-        if request.is_json:
-            return jsonify(success=True, message="Enquiry reassigned.", reload=True)
         flash("Enquiry reassigned.", "success")
     else:
-        if request.is_json:
-            return jsonify(success=False, message="Invalid reassignment."), 400
         flash("Invalid reassignment.", "danger")
     return redirect(url_for("enquiries.index"))
 
@@ -308,13 +349,35 @@ def edit(enquiry_id):
         flash("Enquiry cannot be edited once it has been assigned.", "warning")
         return redirect(url_for("enquiries.index"))
 
-    labs = Lab.query.order_by(Lab.name).all()
     if request.is_json:
-        form = _json_form(EnquiryForm, lab_id=str(current_user.assigned_lab_id or ""))
-    else:
-        form = EnquiryForm()
-    form.lab_id.choices = [(lab.id, f"{lab.name} ({lab.province.name})") for lab in labs]
+        data = request.get_json() or {}
+        student_name = _json_str(data, "student_name")
+        student_number = _json_str(data, "student_number")
+        category = _json_str(data, "category")
+        description = _json_str(data, "description")
+        escalation_reason = _json_str(data, "escalation_reason")
 
+        errors = []
+        if not student_name:      errors.append("Student name is required")
+        if not student_number:    errors.append("Student number is required")
+        if not category:          errors.append("Category is required")
+        if not description:       errors.append("Description is required")
+        if not escalation_reason: errors.append("Escalation reason is required")
+        if errors:
+            return jsonify(success=False, message="; ".join(errors)), 400
+
+        enquiry.student_name = student_name
+        enquiry.student_number = student_number
+        enquiry.category = category
+        enquiry.description = description
+        enquiry.escalation_reason = escalation_reason
+        db.session.commit()
+        log_activity("updated", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
+        return jsonify(success=True, message="Enquiry updated successfully.", reload=True)
+
+    labs = Lab.query.order_by(Lab.name).all()
+    form = EnquiryForm()
+    form.lab_id.choices = [(lab.id, f"{lab.name} ({lab.province.name})") for lab in labs]
     if form.validate_on_submit():
         enquiry.student_name = form.student_name.data.strip()
         enquiry.student_number = form.student_number.data.strip()
@@ -323,13 +386,8 @@ def edit(enquiry_id):
         enquiry.escalation_reason = form.escalation_reason.data.strip()
         db.session.commit()
         log_activity("updated", "enquiry", f"{enquiry.tracking_number} ({enquiry.student_name})", enquiry.id)
-        if request.is_json:
-            return jsonify(success=True, message="Enquiry updated successfully.", reload=True)
         flash("Enquiry updated successfully.", "success")
     else:
-        errors = "; ".join([f"{f}: {', '.join(m)}" for f, m in form.errors.items()])
-        if request.is_json:
-            return jsonify(success=False, message=f"Unable to update enquiry. {errors}"), 400
         flash("Unable to update enquiry.", "danger")
     return redirect(url_for("enquiries.index"))
 
