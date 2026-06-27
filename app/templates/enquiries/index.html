@@ -500,6 +500,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const submitBtn = createForm.querySelector("[type=submit]");
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Submitting…"; }
+    if (typeof showLoadingOverlay === "function") showLoadingOverlay();
     const formData = new FormData(createForm);
     const obj = {};
     formData.forEach((v, k) => obj[k] = v);
@@ -510,6 +511,7 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify(obj),
       });
       const data = await resp.json();
+      if (typeof hideLoadingOverlay === "function") hideLoadingOverlay();
       if (data.success) {
         bootstrap.Modal.getInstance(document.getElementById("enquiryCreateModal"))?.hide();
         document.getElementById("confirmTrackingNumber").textContent = data.tracking_number;
@@ -517,6 +519,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const confirmModal = document.getElementById("trackingConfirmModal");
         const bsConfirm = new bootstrap.Modal(confirmModal, { backdrop: "static", keyboard: false });
         document.getElementById("trackingConfirmDoneBtn").onclick = () => {
+          if (typeof showLoadingOverlay === "function") showLoadingOverlay();
           bsConfirm.hide();
           location.reload();
         };
@@ -527,6 +530,7 @@ document.addEventListener("DOMContentLoaded", () => {
         alert(data.message || "Failed to submit enquiry.");
       }
     } catch {
+      if (typeof hideLoadingOverlay === "function") hideLoadingOverlay();
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Submit & Escalate"; }
       alert("An error occurred. Please try again.");
     }
@@ -638,6 +642,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("form[data-ajax-action='true']").forEach(form => {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (typeof showLoadingOverlay === "function") showLoadingOverlay();
       const formData = new FormData(form);
       const obj = {};
       formData.forEach((v, k) => obj[k] = v);
@@ -650,11 +655,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await resp.json();
         if (data.success) {
           bootstrap.Modal.getInstance(form.closest(".modal"))?.hide();
+          // Keep overlay up through the reload; otherwise clear it.
+          if (!data.reload && typeof hideLoadingOverlay === "function") hideLoadingOverlay();
           if (data.reload) location.reload();
         } else {
+          if (typeof hideLoadingOverlay === "function") hideLoadingOverlay();
           alert(data.message || "An error occurred.");
         }
       } catch {
+        if (typeof hideLoadingOverlay === "function") hideLoadingOverlay();
         alert("An error occurred. Please try again.");
       }
     });

@@ -256,6 +256,29 @@ function bindAjaxForms() {
   setupPasswordModalListeners();
 }
 
+// Global processing feedback for ALL users and ALL actions.
+// 1) Any native (page-navigating) form submission shows the overlay.
+//    Fetch/AJAX handlers call preventDefault(), so defaultPrevented filters
+//    them out — they manage the overlay themselves.
+// 2) Programmatic form.submit() calls bypass the submit event entirely, so we
+//    wrap the native method to show the overlay before submitting.
+function enableGlobalProcessingFeedback() {
+  document.addEventListener("submit", (event) => {
+    if (event.defaultPrevented) return;
+    showLoadingOverlay();
+  });
+
+  if (!HTMLFormElement.prototype.__overlayPatched) {
+    const nativeSubmit = HTMLFormElement.prototype.submit;
+    HTMLFormElement.prototype.submit = function () {
+      showLoadingOverlay();
+      return nativeSubmit.apply(this, arguments);
+    };
+    HTMLFormElement.prototype.__overlayPatched = true;
+  }
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   bindAjaxForms();
+  enableGlobalProcessingFeedback();
 });
