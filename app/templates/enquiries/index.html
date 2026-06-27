@@ -512,9 +512,12 @@ document.addEventListener("DOMContentLoaded", () => {
         bootstrap.Modal.getInstance(document.getElementById("enquiryCreateModal"))?.hide();
         document.getElementById("confirmTrackingNumber").textContent = data.tracking_number;
         document.getElementById("confirmStudentName").textContent = `Student: ${data.student_name}`;
-        new bootstrap.Modal(document.getElementById("trackingConfirmModal")).show();
+        const confirmModal = document.getElementById("trackingConfirmModal");
+        if (data.reload) {
+          confirmModal.addEventListener("hidden.bs.modal", () => location.reload(), { once: true });
+        }
+        new bootstrap.Modal(confirmModal).show();
         createForm.reset();
-        if (data.reload) setTimeout(() => location.reload(), 2500);
       } else {
         alert(data.message || "Failed to submit enquiry.");
       }
