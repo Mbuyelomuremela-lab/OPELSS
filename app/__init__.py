@@ -67,25 +67,56 @@ def create_app():
 
 
 def _ensure_runtime_schema_columns(app: Flask) -> None:
-    # Existing project migrations are incomplete; keep critical additive columns in sync.
+    # Keeps critical additive columns in sync across SQLite (dev) and PostgreSQL (prod).
     with app.app_context():
         try:
+            dialect = db.engine.dialect.name  # "sqlite" or "postgresql"
+
+            def existing_columns(table: str) -> set:
+                if dialect == "sqlite":
+                    rows = conn.exec_driver_sql(f"PRAGMA table_info({table})").fetchall()
+                    return {row[1] for row in rows}
+                else:
+                    rows = conn.exec_driver_sql(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name = :t", {"t": table}
+                    ).fetchall()
+                    return {row[0] for row in rows}
+
+            def add_column(table: str, col: str, col_type: str) -> None:
+                conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}")
+
             with db.engine.begin() as conn:
-                user_columns = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(users)").fetchall()}
-                if "staff_number" not in user_columns:
-                    conn.exec_driver_sql("ALTER TABLE users ADD COLUMN staff_number VARCHAR(8)")
-                announcement_columns = {
-                    row[1] for row in conn.exec_driver_sql("PRAGMA table_info(announcements)").fetchall()
-                }
-                if "poster_filename" not in announcement_columns:
-                    conn.exec_driver_sql("ALTER TABLE announcements ADD COLUMN poster_filename VARCHAR(255)")
-                visitor_columns = {
-                    row[1] for row in conn.exec_driver_sql("PRAGMA table_info(visitors)").fetchall()
-                }
-                if "student_number" not in visitor_columns:
-                    conn.exec_driver_sql("ALTER TABLE visitors ADD COLUMN student_number VARCHAR(8)")
-                if "cellphone_number" not in visitor_columns:
-                    conn.exec_driver_sql("ALTER TABLE visitors ADD COLUMN cellphone_number VARCHAR(20)")
+                user_cols = existing_columns("users")
+                if "staff_number" not in user_cols:
+                    add_column("users", "staff_number", "VARCHAR(8)")
+
+                ann_cols = existing_columns("announcements")
+                if "poster_filename" not in ann_cols:
+                    add_column("announcements", "poster_filename", "VARCHAR(255)")
+
+                vis_cols = existing_columns("visitors")
+                if "student_number" not in vis_cols:
+                    add_column("visitors", "student_number", "VARCHAR(8)")
+                if "cellphone_number" not in vis_cols:
+                    add_column("visitors", "cellphone_number", "VARCHAR(20)")
+
+                enq_cols = existing_columns("enquiries")
+                enq_additions = [
+                    ("escalation_reason", "TEXT"),
+                    ("not_resolved_reason", "TEXT"),
+                    ("assigned_by", "INTEGER"),
+                    ("closed_by", "INTEGER"),
+                    ("escalated_at", "TIMESTAMP"),
+                    ("assigned_at", "TIMESTAMP"),
+                    ("in_progress_at", "TIMESTAMP"),
+                    ("resolved_at", "TIMESTAMP"),
+                    ("closed_at", "TIMESTAMP"),
+                ]
+                for col, col_type in enq_additions:
+                    if col not in enq_cols:
+                        add_column("enquiries", col, col_type)
+
         except Exception:
             # App should remain bootable even when database is mounted read-only.
             pass
