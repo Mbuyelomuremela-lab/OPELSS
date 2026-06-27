@@ -131,7 +131,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
 {% if current_user.role == "Lab Trainee" %}
 <div class="modal fade" id="enquiryCreateModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
-    <form method="post" action="{{ url_for('enquiries.create') }}" id="enquiryCreateForm" data-ajax="true">
+    <form method="post" action="{{ url_for('enquiries.create') }}" id="enquiryCreateForm">
       {{ form.hidden_tag() }}
       <div class="modal-header">
         <h5 class="modal-title">Submit & Escalate Enquiry</h5>
@@ -498,6 +498,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const createForm = document.getElementById("enquiryCreateForm");
   createForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const submitBtn = createForm.querySelector("[type=submit]");
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Submitting…"; }
     const formData = new FormData(createForm);
     const obj = {};
     formData.forEach((v, k) => obj[k] = v);
@@ -516,14 +518,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const bsConfirm = new bootstrap.Modal(confirmModal, { backdrop: "static", keyboard: false });
         document.getElementById("trackingConfirmDoneBtn").onclick = () => {
           bsConfirm.hide();
-          if (data.reload) location.reload();
+          location.reload();
         };
         bsConfirm.show();
         createForm.reset();
       } else {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Submit & Escalate"; }
         alert(data.message || "Failed to submit enquiry.");
       }
     } catch {
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Submit & Escalate"; }
       alert("An error occurred. Please try again.");
     }
   });
