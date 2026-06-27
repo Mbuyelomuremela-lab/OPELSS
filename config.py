@@ -7,20 +7,20 @@ load_dotenv(BASE_DIR / ".env")
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "change-this-secret-key")
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL",
-        f"sqlite:///{BASE_DIR / 'instance' / 'app.db'}"
-    )
+
+    _db_url = os.environ.get("DATABASE_URL", f"sqlite:///{BASE_DIR / 'instance' / 'app.db'}")
+    # SQLAlchemy 2.x requires "postgresql://" but Azure supplies "postgres://"
+    if _db_url.startswith("postgres://"):
+        _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+    SQLALCHEMY_DATABASE_URI = _db_url
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-     # --- ADDED POOLING OPTIONS HERE ---
+    _is_postgres = _db_url.startswith("postgresql")
     SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 10,            # Keeps 10 connections open
-        "max_overflow": 20,         # Allows extra connections during traffic spikes
-        "pool_recycle": 1800,       # Resets connections every 30 mins
-        "pool_pre_ping": True,      # Checks if connection is "alive" before using (Fixes Azure timeouts)
+        "pool_pre_ping": True,
+        **({"pool_size": 10, "max_overflow": 20, "pool_recycle": 1800} if _is_postgres else {}),
     }
-    # ----------------------------------
 
     
     SESSION_COOKIE_HTTPONLY = True
