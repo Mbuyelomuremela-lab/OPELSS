@@ -125,11 +125,11 @@ header_title %}Asset Management{% endblock %} {% block content %}
       <div class="modal-header"><h5 class="modal-title">Edit Asset</h5><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="mb-3">{{ form.asset_name(class_='form-control', id='assetEditName') }}</div>
-        <div class="mb-3">{{ form.category(class_='form-control', id='assetEditCategory') }}</div>
-        <div class="mb-3">{{ form.serial_number(class_='form-control', id='assetEditSerial') }}</div>
-        <div class="mb-3">{{ form.status(class_='form-select', id='assetEditStatus') }}</div>
-        <div class="mb-3">{{ form.lab_id(class_='form-select', id='assetEditLab') }}</div>
+        <div class="mb-3"><label class="form-label" for="assetEditName">Asset Description</label>{{ form.asset_name(class_='form-control', id='assetEditName') }}</div>
+        <div class="mb-3"><label class="form-label" for="assetEditCategory">Category</label>{{ form.category(class_='form-control', id='assetEditCategory') }}</div>
+        <div class="mb-3"><label class="form-label" for="assetEditSerial">Unisa Tag Number</label>{{ form.serial_number(class_='form-control', id='assetEditSerial') }}</div>
+        <div class="mb-3"><label class="form-label" for="assetEditStatus">Status</label>{{ form.status(class_='form-select', id='assetEditStatus') }}</div>
+        <div class="mb-3"><label class="form-label" for="assetEditLab">Lab</label>{{ form.lab_id(class_='form-select', id='assetEditLab') }}</div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Save</button></div>
     </form>

@@ -111,15 +111,15 @@ block header_title %}Programme Logging{% endblock %} {% block content %}
       <div class="modal-header"><h5 class="modal-title">Edit Programme</h5><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
       <div class="modal-body row g-3">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="col-12">{{ form.title(class_='form-control', id='programmeEditTitle') }}</div>
-        <div class="col-12">{{ form.objective(class_='form-control', id='programmeEditObjective', rows=3) }}</div>
-        <div class="col-12">{{ form.target_audience(class_='form-control', id='programmeEditAudience') }}</div>
-        <div class="col-6">{{ form.attendance_count(class_='form-control', id='programmeEditAttendance') }}</div>
-        <div class="col-6">{{ form.lab_id(class_='form-select', id='programmeEditLab') }}</div>
-        <div class="col-12">{{ form.activities_done(class_='form-control', id='programmeEditActivities', rows=3) }}</div>
-        <div class="col-4">{{ form.date(class_='form-control', id='programmeEditDate') }}</div>
-        <div class="col-4">{{ form.start_time(class_='form-control', id='programmeEditStart') }}</div>
-        <div class="col-4">{{ form.end_time(class_='form-control', id='programmeEditEnd') }}</div>
+        <div class="col-12"><label class="form-label" for="programmeEditTitle">Programme Title</label>{{ form.title(class_='form-control', id='programmeEditTitle') }}</div>
+        <div class="col-12"><label class="form-label" for="programmeEditObjective">Objective</label>{{ form.objective(class_='form-control', id='programmeEditObjective', rows=3) }}</div>
+        <div class="col-12"><label class="form-label" for="programmeEditAudience">Target Audience</label>{{ form.target_audience(class_='form-control', id='programmeEditAudience') }}</div>
+        <div class="col-6"><label class="form-label" for="programmeEditAttendance">Attendance Count</label>{{ form.attendance_count(class_='form-control', id='programmeEditAttendance') }}</div>
+        <div class="col-6"><label class="form-label" for="programmeEditLab">Lab</label>{{ form.lab_id(class_='form-select', id='programmeEditLab') }}</div>
+        <div class="col-12"><label class="form-label" for="programmeEditActivities">Activities Done</label>{{ form.activities_done(class_='form-control', id='programmeEditActivities', rows=3) }}</div>
+        <div class="col-4"><label class="form-label" for="programmeEditDate">Date</label>{{ form.date(class_='form-control', id='programmeEditDate') }}</div>
+        <div class="col-4"><label class="form-label" for="programmeEditStart">Start Time</label>{{ form.start_time(class_='form-control', id='programmeEditStart') }}</div>
+        <div class="col-4"><label class="form-label" for="programmeEditEnd">End Time</label>{{ form.end_time(class_='form-control', id='programmeEditEnd') }}</div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Save</button></div>
     </form>

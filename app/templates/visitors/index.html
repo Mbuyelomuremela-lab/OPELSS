@@ -162,13 +162,13 @@ header_title %}Visitor Logs{% endblock %} {% block content %}
       <div class="modal-header"><h5 class="modal-title">Edit Visitor</h5><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="mb-3">{{ form.visitor_name(class_='form-control', id='visitorEditName') }}</div>
-        <div class="mb-3">{{ form.category(class_='form-select', id='visitorEditCategory') }}</div>
+        <div class="mb-3"><label class="form-label" for="visitorEditName">Visitor Name</label>{{ form.visitor_name(class_='form-control', id='visitorEditName') }}</div>
+        <div class="mb-3"><label class="form-label" for="visitorEditCategory">Category</label>{{ form.category(class_='form-select', id='visitorEditCategory') }}</div>
         <div class="mb-3" id="visitorEditStudentField">{{ form.student_number.label(class_='form-label') }}{{ form.student_number(class_='form-control', id='visitorEditStudentNumber', maxlength='8', inputmode='numeric', pattern='\\d{8}') }}</div>
         <div class="mb-3" id="visitorEditCellphoneField">{{ form.cellphone_number.label(class_='form-label') }}{{ form.cellphone_number(class_='form-control', id='visitorEditCellphone', inputmode='tel') }}</div>
-        <div class="mb-3">{{ form.purpose(class_='form-control', id='visitorEditPurpose', rows=3) }}</div>
-        <div class="mb-3">{{ form.visit_date(class_='form-control', id='visitorEditDate') }}</div>
-        <div class="mb-3">{{ form.lab_id(class_='form-select', id='visitorEditLab') }}</div>
+        <div class="mb-3"><label class="form-label" for="visitorEditPurpose">Purpose</label>{{ form.purpose(class_='form-control', id='visitorEditPurpose', rows=3) }}</div>
+        <div class="mb-3"><label class="form-label" for="visitorEditDate">Visit Date</label>{{ form.visit_date(class_='form-control', id='visitorEditDate') }}</div>
+        <div class="mb-3"><label class="form-label" for="visitorEditLab">Lab</label>{{ form.lab_id(class_='form-select', id='visitorEditLab') }}</div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Save</button></div>
     </form>

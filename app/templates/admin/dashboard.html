@@ -289,6 +289,7 @@
         </div>
         <div class="modal-body">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <label class="form-label" for="provinceEditName">Province Name</label>
           <input
             type="text"
             class="form-control"
@@ -320,6 +321,7 @@
         <div class="modal-body row g-3">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div class="col-12">
+            <label class="form-label" for="labEditName">Lab Name</label>
             <input
               type="text"
               class="form-control"
@@ -329,6 +331,7 @@
             />
           </div>
           <div class="col-12">
+            <label class="form-label" for="labEditProvince">Province</label>
             <select
               class="form-select"
               name="province_id"
@@ -341,6 +344,7 @@
             </select>
           </div>
           <div class="col-6">
+            <label class="form-label" for="labEditLatitude">Latitude</label>
             <input
               type="number"
               step="any"
@@ -351,6 +355,7 @@
             />
           </div>
           <div class="col-6">
+            <label class="form-label" for="labEditLongitude">Longitude</label>
             <input
               type="number"
               step="any"
@@ -361,6 +366,7 @@
             />
           </div>
           <div class="col-12">
+            <label class="form-label" for="labEditRadius">Radius (meters)</label>
             <input
               type="number"
               step="any"
@@ -395,6 +401,7 @@
         <div class="modal-body row g-3">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div class="col-12">
+            <label class="form-label" for="userEditName">Full Name</label>
             <input
               type="text"
               class="form-control"
@@ -404,6 +411,7 @@
             />
           </div>
           <div class="col-12">
+            <label class="form-label" for="userEditStaffNumber">Staff Number</label>
             <input
               type="text"
               class="form-control"
@@ -413,6 +421,7 @@
             />
           </div>
           <div class="col-12">
+            <label class="form-label" for="userEditEmail">Email</label>
             <input
               type="email"
               class="form-control"
@@ -422,6 +431,7 @@
             />
           </div>
           <div class="col-12">
+            <label class="form-label" for="userEditRole">Role</label>
             <select class="form-select" name="role" id="userEditRole" required>
               <option value="Admin">Admin</option>
               <option value="HQ Trainee">HQ Trainee</option>
@@ -429,6 +439,7 @@
             </select>
           </div>
           <div class="col-12">
+            <label class="form-label" for="userEditLab">Assigned Lab</label>
             <select class="form-select" name="assigned_lab_id" id="userEditLab">
               <option value="0">Unassigned</option>
               {% for lab in labs %}
