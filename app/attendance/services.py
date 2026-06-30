@@ -11,10 +11,11 @@ from app.extensions import db
 from app.models.attendance import AttendanceLog, AttendanceAudit
 from app.models.user import User
 from app.models.lab import Lab
+from app.utils import sast_now, sast_today
 
 
 def record_clock_in(user: User, lab: Lab, latitude: float, longitude: float):
-    today = date.today()
+    today = sast_today()
     log = AttendanceLog.query.filter_by(user_id=user.id, date=today).first()
     if log and log.clock_in_time:
         return None, "You have already clocked in today."
@@ -23,7 +24,7 @@ def record_clock_in(user: User, lab: Lab, latitude: float, longitude: float):
         log = AttendanceLog(user_id=user.id, lab_id=lab.id, date=today)
         db.session.add(log)
 
-    log.clock_in_time = datetime.now().time()
+    log.clock_in_time = sast_now().time()
     log.login_latitude = latitude
     log.login_longitude = longitude
     db.session.commit()
@@ -31,14 +32,14 @@ def record_clock_in(user: User, lab: Lab, latitude: float, longitude: float):
 
 
 def record_clock_out(user: User, lab: Lab, latitude: float, longitude: float, early_departure_reason: str = None):
-    today = date.today()
+    today = sast_today()
     log = AttendanceLog.query.filter_by(user_id=user.id, date=today).first()
     if not log or not log.clock_in_time:
         return None, "You must clock in before clocking out."
     if log.clock_out_time:
         return None, "You have already clocked out for today."
 
-    log.clock_out_time = datetime.now().time()
+    log.clock_out_time = sast_now().time()
     log.logout_latitude = latitude
     log.logout_longitude = longitude
     if log.clock_out_time < time(16, 0) and not early_departure_reason:

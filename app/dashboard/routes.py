@@ -1,7 +1,7 @@
-from datetime import date
 from flask import render_template, abort
 from flask_login import login_required, current_user
 from app.dashboard import dashboard_bp
+from app.utils import sast_today
 from app.extensions import db
 from app.models.lab import Lab
 from app.models.province import Province
@@ -43,7 +43,7 @@ def home():
         if not lab:
             abort(403)
 
-        today = date.today()
+        today = sast_today()
         monthly_attendance = AttendanceLog.query.filter(
             AttendanceLog.user_id == current_user.id,
             db.extract("month", AttendanceLog.date) == today.month,

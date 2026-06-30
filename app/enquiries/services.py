@@ -1,10 +1,11 @@
 from datetime import datetime
 from app.extensions import db
 from app.models.enquiry import Enquiry
+from app.utils import sast_today
 
 
 def generate_tracking_number():
-    year = datetime.utcnow().year
+    year = sast_today().year
     count = Enquiry.query.filter(Enquiry.created_at >= datetime(year, 1, 1)).count() + 1
     return f"ENQ-{year}-{count:06d}"
 

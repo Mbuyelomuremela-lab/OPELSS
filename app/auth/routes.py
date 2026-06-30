@@ -1,4 +1,3 @@
-from datetime import date
 from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from app.auth import auth_bp
@@ -6,12 +5,13 @@ from .forms import LoginForm, PasswordResetForm
 from .services import authenticate_user, reset_password
 from app.models.announcement import Announcement
 from app.models.province import Province
+from app.utils import sast_today
 from sqlalchemy.orm import joinedload
 
 
 @auth_bp.route("/")
 def landing():
-    announcements = Announcement.query.filter(Announcement.expiry_date >= date.today()).order_by(Announcement.created_at.desc()).all()
+    announcements = Announcement.query.filter(Announcement.expiry_date >= sast_today()).order_by(Announcement.created_at.desc()).all()
     provinces = Province.query.options(joinedload(Province.labs)).order_by(Province.name).all()
     form = LoginForm()
     return render_template("landing.html", announcements=announcements, provinces=provinces)

@@ -1,5 +1,5 @@
-from datetime import datetime
 from app.extensions import db
+from app.utils import sast_now
 
 
 class AttendanceLog(db.Model):
@@ -16,7 +16,7 @@ class AttendanceLog(db.Model):
     logout_latitude = db.Column(db.Float, nullable=True)
     logout_longitude = db.Column(db.Float, nullable=True)
     early_departure_reason = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=sast_now)
 
     user = db.relationship("User", back_populates="attendance_logs")
     lab = db.relationship("Lab", back_populates="attendance_logs")
@@ -34,7 +34,7 @@ class AttendanceAudit(db.Model):
     changed_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     old_values = db.Column(db.JSON, nullable=True)
     new_values = db.Column(db.JSON, nullable=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=sast_now)
 
     attendance_log = db.relationship("AttendanceLog", back_populates="audits")
 

@@ -1,5 +1,5 @@
-from datetime import date
 from app.extensions import db
+from app.utils import sast_today
 
 
 class Visitor(db.Model):
@@ -11,7 +11,7 @@ class Visitor(db.Model):
     student_number = db.Column(db.String(8))
     cellphone_number = db.Column(db.String(20))
     purpose = db.Column(db.Text, nullable=False)
-    visit_date = db.Column(db.Date, nullable=False, default=date.today)
+    visit_date = db.Column(db.Date, nullable=False, default=sast_today)
     lab_id = db.Column(db.Integer, db.ForeignKey("labs.id"), nullable=False)
 
     lab = db.relationship("Lab", back_populates="visitors")
