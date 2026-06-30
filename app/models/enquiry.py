@@ -1,5 +1,5 @@
-from datetime import datetime
 from app.extensions import db
+from app.utils import sast_now
 
 
 class Enquiry(db.Model):
@@ -21,7 +21,7 @@ class Enquiry(db.Model):
     assigned_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     closed_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     escalated = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=sast_now)
     escalated_at = db.Column(db.DateTime, nullable=True)
     assigned_at = db.Column(db.DateTime, nullable=True)
     in_progress_at = db.Column(db.DateTime, nullable=True)

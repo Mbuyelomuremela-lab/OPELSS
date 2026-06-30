@@ -1,5 +1,5 @@
-from datetime import datetime
 from app.extensions import db
+from app.utils import sast_now
 
 
 class ActivityLog(db.Model):
@@ -17,7 +17,7 @@ class ActivityLog(db.Model):
     # Human label of the affected record, kept so the log stays readable
     # even after that record is deleted.
     entity_label = db.Column(db.String(255), nullable=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = db.Column(db.DateTime, default=sast_now, nullable=False)
 
     def __repr__(self):
         return f"<ActivityLog {self.actor_name} {self.action} {self.entity_type} {self.entity_id}>"

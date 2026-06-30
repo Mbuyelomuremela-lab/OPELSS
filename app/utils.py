@@ -1,9 +1,26 @@
 import math
 import random
 import string
+from datetime import datetime, date
 from functools import wraps
+from zoneinfo import ZoneInfo
 from flask import abort, flash, redirect, request, url_for
 from flask_login import current_user
+
+# All OPELSS users are in South Africa. Production runs on UTC servers, so we
+# anchor every "now"/"today" to South African Standard Time (UTC+2, no DST)
+# instead of relying on the server clock.
+SAST = ZoneInfo("Africa/Johannesburg")
+
+
+def sast_now() -> datetime:
+    """Current wall-clock datetime in South African Standard Time (naive)."""
+    return datetime.now(SAST).replace(tzinfo=None)
+
+
+def sast_today() -> date:
+    """Current calendar date in South African Standard Time."""
+    return datetime.now(SAST).date()
 
 
 def generate_secure_password(length: int = 7) -> str:

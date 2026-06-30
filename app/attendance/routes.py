@@ -1,11 +1,10 @@
-from datetime import date
 from flask import render_template, redirect, url_for, flash, request, send_file
 from flask_login import login_required, current_user
 from app.attendance import attendance_bp
 from app.attendance.forms import ClockInForm, ClockOutForm
 from app.attendance.services import record_clock_in, record_clock_out, generate_timesheet_pdf
 from app.models.attendance import AttendanceLog
-from app.utils import lab_trainee_required
+from app.utils import lab_trainee_required, sast_today
 from app.extensions import db
 
 
@@ -19,7 +18,7 @@ def overview():
 
     clock_in_form = ClockInForm()
     clock_out_form = ClockOutForm()
-    today = date.today()
+    today = sast_today()
     logs = AttendanceLog.query.filter_by(user_id=current_user.id).order_by(AttendanceLog.date.desc()).limit(15).all()
 
     return render_template(
@@ -78,8 +77,9 @@ def clock_out():
 @login_required
 @lab_trainee_required
 def export_timesheet():
-    month = int(request.args.get("month", date.today().month))
-    year = int(request.args.get("year", date.today().year))
+    today = sast_today()
+    month = int(request.args.get("month", today.month))
+    year = int(request.args.get("year", today.year))
     buffer = generate_timesheet_pdf(current_user, month, year)
     return send_file(
         buffer,
