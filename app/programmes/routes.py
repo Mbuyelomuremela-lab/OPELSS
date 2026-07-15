@@ -1,9 +1,9 @@
 from datetime import datetime
-from flask import render_template, redirect, url_for, flash, request, abort, jsonify
+from flask import render_template, redirect, url_for, flash, request, abort, jsonify, send_file
 from flask_login import login_required, current_user
 from app.programmes import programmes_bp
 from app.programmes.forms import ProgrammeForm
-from app.programmes.services import create_programme
+from app.programmes.services import create_programme, export_programmes_excel
 from app.models.programme import Programme
 from app.models.lab import Lab
 from app.models.province import Province
@@ -78,6 +78,31 @@ def index():
         selected_lab_id=lab_filter,
         selected_province_id=province_filter,
         selected_facilitator_id=facilitator_filter,
+    )
+
+
+@programmes_bp.route("/export")
+@login_required
+def export():
+    if current_user.role not in ["Admin", "HQ Trainee"]:
+        abort(403)
+    province_id = request.args.get("province_id", type=int)
+    lab_id = request.args.get("lab_id", type=int)
+    facilitator_id = request.args.get("facilitator_id", type=int)
+    date_from = _parse_date(request.args.get("date_from"))
+    date_to = _parse_date(request.args.get("date_to"))
+    buffer = export_programmes_excel(
+        province_id=province_id,
+        lab_id=lab_id,
+        date_from=date_from,
+        date_to=date_to,
+        facilitator_id=facilitator_id,
+    )
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name="programmes_export.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
 
