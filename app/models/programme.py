@@ -2,6 +2,13 @@ from app.extensions import db
 from app.utils import sast_now
 
 
+programme_facilitators = db.Table(
+    "programme_facilitators",
+    db.Column("programme_id", db.Integer, db.ForeignKey("programmes.id"), primary_key=True),
+    db.Column("user_id", db.Integer, db.ForeignKey("users.id"), primary_key=True),
+)
+
+
 class Programme(db.Model):
     __tablename__ = "programmes"
 
@@ -20,6 +27,12 @@ class Programme(db.Model):
 
     lab = db.relationship("Lab", back_populates="programmes")
     creator = db.relationship("User", back_populates="programmes_created")
+    facilitators = db.relationship(
+        "User",
+        secondary=programme_facilitators,
+        back_populates="programmes_facilitated",
+        order_by="User.full_name",
+    )
 
     def __repr__(self):
         return f"<Programme {self.title} on {self.date}>"

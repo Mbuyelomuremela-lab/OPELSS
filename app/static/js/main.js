@@ -157,7 +157,13 @@ async function submitAjaxForm(event) {
   const formData = new FormData(form);
   const payload = {};
   formData.forEach((value, key) => {
-    payload[key] = value;
+    const field = form.elements.namedItem(key);
+    const isMultiValue = field && field.tagName === "SELECT" && field.multiple;
+    if (isMultiValue) {
+      payload[key] = Array.isArray(payload[key]) ? [...payload[key], value] : [value];
+    } else {
+      payload[key] = value;
+    }
   });
 
   try {
@@ -266,6 +272,12 @@ function enableGlobalProcessingFeedback() {
   document.addEventListener("submit", (event) => {
     if (event.defaultPrevented) return;
     showLoadingOverlay();
+    // A file-download submission (e.g. Excel export) doesn't navigate the page,
+    // so nothing would ever hide the overlay. Auto-dismiss it for forms flagged
+    // as downloads.
+    if (event.target.matches("[data-download]")) {
+      setTimeout(hideLoadingOverlay, 2000);
+    }
   });
 
   if (!HTMLFormElement.prototype.__overlayPatched) {
