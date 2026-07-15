@@ -272,6 +272,12 @@ function enableGlobalProcessingFeedback() {
   document.addEventListener("submit", (event) => {
     if (event.defaultPrevented) return;
     showLoadingOverlay();
+    // A file-download submission (e.g. Excel export) doesn't navigate the page,
+    // so nothing would ever hide the overlay. Auto-dismiss it for forms flagged
+    // as downloads.
+    if (event.target.matches("[data-download]")) {
+      setTimeout(hideLoadingOverlay, 2000);
+    }
   });
 
   if (!HTMLFormElement.prototype.__overlayPatched) {

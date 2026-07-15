@@ -3,7 +3,7 @@
 %} {% block content %}
 <div class="card rounded-4 shadow-sm p-4">
   <h5>Export Reports</h5>
-  <form method="get" class="row g-3 align-items-end">
+  <form method="get" class="row g-3 align-items-end" data-download>
     <div class="col-md-4">
       <label class="form-label">Report Type</label>
       <select class="form-select" name="report_type" id="reportType">
@@ -34,21 +34,24 @@
       </select>
     </div>
     <div class="col-md-2">
-      <button type="submit" class="btn btn-primary w-100">Prepare</button>
+      <button type="submit" class="btn btn-primary w-100">Download</button>
     </div>
   </form>
   <div class="mt-4">
     <div class="alert alert-info">
-      Choose a report type and filters, then click Export when the form loads.
+      Choose a report type and filters, then click Download.
     </div>
     <div id="reportLinkPlaceholder"></div>
   </div>
 </div>
 <script>
-  document.getElementById("reportType").addEventListener("change", function () {
-    const form = this.closest("form");
-    form.action = `/reports/export/${this.value}`;
-  });
-  document.querySelector("form").dispatchEvent(new Event("change"));
+  const reportType = document.getElementById("reportType");
+  const reportForm = reportType.closest("form");
+  function syncReportAction() {
+    reportForm.action = `/reports/export/${reportType.value}`;
+  }
+  reportType.addEventListener("change", syncReportAction);
+  // Set the action for the initially-selected type so the first Download works.
+  syncReportAction();
 </script>
 {% endblock %}
