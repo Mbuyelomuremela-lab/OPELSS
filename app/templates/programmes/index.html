@@ -9,6 +9,9 @@ block header_title %}Programme Logging{% endblock %} {% block content %}
           <button class="btn btn-outline-success" id="programmeAddBtn" type="button">Log Programme</button>
           <button class="btn btn-outline-primary" id="programmeEditBtn" type="button" disabled>Edit</button>
           <button class="btn btn-outline-danger" id="programmeDeleteBtn" type="button" disabled>Delete</button>
+          {% if current_user.role in ['Admin', 'HQ Trainee'] %}
+          <a class="btn btn-primary" href="{{ url_for('programmes.export', **request.args) }}">Export to Excel</a>
+          {% endif %}
         </div>
       </div>
       <div class="mb-3">
