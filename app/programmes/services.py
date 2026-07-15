@@ -1,4 +1,5 @@
 from app.models.programme import Programme
+from app.models.user import User
 from app.extensions import db
 
 
@@ -13,6 +14,7 @@ def create_programme(
     end_time,
     lab_id: int,
     created_by: int,
+    facilitator_ids: list[int],
 ):
     programme = Programme(
         title=title.strip(),
@@ -25,6 +27,7 @@ def create_programme(
         end_time=end_time,
         lab_id=lab_id,
         created_by=created_by,
+        facilitators=User.query.filter(User.id.in_(facilitator_ids)).all(),
     )
     db.session.add(programme)
     db.session.commit()

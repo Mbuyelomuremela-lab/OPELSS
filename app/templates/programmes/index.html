@@ -1,66 +1,60 @@
 {% extends "base.html" %} {% block title %}Programmes – OPELSS{% endblock %} {%
 block header_title %}Programme Logging{% endblock %} {% block content %}
 <div class="row g-4">
-  <div class="col-lg-5">
-    <div class="card rounded-4 shadow-sm p-4">
-      <h5>New Programme</h5>
-      <form
-        method="post"
-        action="{{ url_for('programmes.create') }}"
-        data-ajax="true"
-        data-refresh-target="#programmesTableBody"
-      >
-        {{ form.hidden_tag() }}
-        <div class="mb-3">
-          {{ form.title.label(class_='form-label') }}{{
-          form.title(class_='form-control') }}
-        </div>
-        <div class="mb-3">
-          {{ form.objective.label(class_='form-label') }}{{
-          form.objective(class_='form-control', rows=3) }}
-        </div>
-        <div class="mb-3">
-          {{ form.target_audience.label(class_='form-label') }}{{
-          form.target_audience(class_='form-control') }}
-        </div>
-        <div class="mb-3">
-          {{ form.attendance_count.label(class_='form-label') }}{{
-          form.attendance_count(class_='form-control') }}
-        </div>
-        <div class="mb-3">
-          {{ form.activities_done.label(class_='form-label') }}{{
-          form.activities_done(class_='form-control', rows=3) }}
-        </div>
-        <div class="row g-3">
-          <div class="col-md-4">
-            {{ form.date.label(class_='form-label') }}{{
-            form.date(class_='form-control') }}
-          </div>
-          <div class="col-md-4">
-            {{ form.start_time.label(class_='form-label') }}{{
-            form.start_time(class_='form-control') }}
-          </div>
-          <div class="col-md-4">
-            {{ form.end_time.label(class_='form-label') }}{{
-            form.end_time(class_='form-control') }}
-          </div>
-        </div>
-        <div class="mb-3 mt-3">
-          {{ form.lab_id.label(class_='form-label') }}{{
-          form.lab_id(class_='form-select') }}
-        </div>
-        {{ form.submit(class_='btn btn-success w-100') }}
-      </form>
-    </div>
-  </div>
-  <div class="col-lg-7">
+  <div class="col-12">
     <div class="card rounded-4 shadow-sm p-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Programme History</h5>
+        <h5 class="mb-0">Programme Records</h5>
         <div class="d-flex gap-2">
+          <button class="btn btn-outline-success" id="programmeAddBtn" type="button">Log Programme</button>
           <button class="btn btn-outline-primary" id="programmeEditBtn" type="button" disabled>Edit</button>
           <button class="btn btn-outline-danger" id="programmeDeleteBtn" type="button" disabled>Delete</button>
         </div>
+      </div>
+      <div class="mb-3">
+        <form id="programmeFiltersForm" method="get" class="row g-2 align-items-end">
+          <div class="col-auto">
+            <label class="form-label small">From</label>
+            <input type="date" name="date_from" class="form-control" value="{{ selected_date_from }}" />
+          </div>
+          <div class="col-auto">
+            <label class="form-label small">To</label>
+            <input type="date" name="date_to" class="form-control" value="{{ selected_date_to }}" />
+          </div>
+          {% if current_user.role in ['Admin', 'HQ Trainee'] %}
+          <div class="col-auto">
+            <label class="form-label small">Lab</label>
+            <select name="lab_id" class="form-select">
+              <option value="">All</option>
+              {% for lab in labs %}
+              <option value="{{ lab.id }}" {% if selected_lab_id == lab.id %}selected{% endif %}>{{ lab.name }} ({{ lab.province.name }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-auto">
+            <label class="form-label small">Province</label>
+            <select name="province_id" class="form-select">
+              <option value="">All</option>
+              {% for p in provinces %}
+              <option value="{{ p.id }}" {% if selected_province_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <div class="col-auto">
+            <label class="form-label small">Facilitated By</label>
+            <select name="facilitator_id" class="form-select">
+              <option value="">All</option>
+              {% for user in facilitators %}
+              <option value="{{ user.id }}" {% if selected_facilitator_id == user.id %}selected{% endif %}>{{ user.full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-secondary" type="submit">Apply</button>
+            <a class="btn btn-link" href="{{ url_for('programmes.index') }}">Reset</a>
+          </div>
+        </form>
       </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle selectable-table" id="programmesTable">
@@ -70,6 +64,7 @@ block header_title %}Programme Logging{% endblock %} {% block content %}
               <th>Date</th>
               <th>Attendance</th>
               <th>Lab</th>
+              <th>Facilitated By</th>
             </tr>
           </thead>
           <tbody id="programmesTableBody">
@@ -82,19 +77,21 @@ block header_title %}Programme Logging{% endblock %} {% block content %}
               data-attendance-count="{{ programme.attendance_count }}"
               data-activities-done="{{ programme.activities_done }}"
               data-date="{{ programme.date.strftime('%Y-%m-%d') }}"
-              data-start-time="{{ programme.start_time.strftime('%H:%M:%S') }}"
-              data-end-time="{{ programme.end_time.strftime('%H:%M:%S') }}"
+              data-start-time="{{ programme.start_time.strftime('%H:%M') }}"
+              data-end-time="{{ programme.end_time.strftime('%H:%M') }}"
               data-lab-id="{{ programme.lab_id }}"
+              data-facilitator-ids="{{ programme.facilitators|map(attribute='id')|join(',') }}"
             >
               <td>{{ programme.title }}</td>
               <td>{{ programme.date.strftime('%Y-%m-%d') }}</td>
               <td>{{ programme.attendance_count }}</td>
               <td>{{ programme.lab.name }}</td>
+              <td>{{ programme.facilitators|map(attribute='full_name')|join(', ') }}</td>
             </tr>
             {% else %}
             <tr>
-              <td colspan="4" class="text-center text-muted">
-                No programmes logged yet.
+              <td colspan="5" class="text-center text-muted">
+                No programmes found.
               </td>
             </tr>
             {% endfor %}
@@ -105,6 +102,33 @@ block header_title %}Programme Logging{% endblock %} {% block content %}
   </div>
 </div>
 
+<!-- Log Programme Modal -->
+<div class="modal fade" id="programmeAddModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+    <form id="programmeAddForm" method="post" action="{{ url_for('programmes.create') }}" data-ajax="true" data-refresh-target="#programmesTableBody">
+      <div class="modal-header"><h5 class="modal-title">Log Programme</h5><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body row g-3">
+        {{ form.hidden_tag() }}
+        <div class="col-12">{{ form.title.label(class_='form-label') }}{{ form.title(class_='form-control') }}</div>
+        <div class="col-12">{{ form.objective.label(class_='form-label') }}{{ form.objective(class_='form-control', rows=3) }}</div>
+        <div class="col-12">{{ form.target_audience.label(class_='form-label') }}{{ form.target_audience(class_='form-control') }}</div>
+        <div class="col-6">{{ form.attendance_count.label(class_='form-label') }}{{ form.attendance_count(class_='form-control') }}</div>
+        <div class="col-6">{{ form.lab_id.label(class_='form-label') }}{{ form.lab_id(class_='form-select') }}</div>
+        <div class="col-12">{{ form.activities_done.label(class_='form-label') }}{{ form.activities_done(class_='form-control', rows=3) }}</div>
+        <div class="col-4">{{ form.date.label(class_='form-label') }}{{ form.date(class_='form-control') }}</div>
+        <div class="col-4">{{ form.start_time.label(class_='form-label') }}{{ form.start_time(class_='form-control') }}</div>
+        <div class="col-4">{{ form.end_time.label(class_='form-label') }}{{ form.end_time(class_='form-control') }}</div>
+        <div class="col-12">
+          {{ form.facilitators.label(class_='form-label') }}{{ form.facilitators(class_='form-select', size=5) }}
+          <div class="form-text">Hold Ctrl (Cmd on Mac) to select multiple.</div>
+        </div>
+      </div>
+      <div class="modal-footer">{{ form.submit(class_='btn btn-success') }}</div>
+    </form>
+  </div></div>
+</div>
+
+<!-- Edit Programme Modal -->
 <div class="modal fade" id="programmeEditModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
     <form id="programmeEditForm" method="post">
@@ -120,8 +144,13 @@ block header_title %}Programme Logging{% endblock %} {% block content %}
         <div class="col-4"><label class="form-label" for="programmeEditDate">Date</label>{{ form.date(class_='form-control', id='programmeEditDate') }}</div>
         <div class="col-4"><label class="form-label" for="programmeEditStart">Start Time</label>{{ form.start_time(class_='form-control', id='programmeEditStart') }}</div>
         <div class="col-4"><label class="form-label" for="programmeEditEnd">End Time</label>{{ form.end_time(class_='form-control', id='programmeEditEnd') }}</div>
+        <div class="col-12">
+          <label class="form-label" for="programmeEditFacilitators">Facilitated By</label>
+          {{ form.facilitators(class_='form-select', id='programmeEditFacilitators', size=5) }}
+          <div class="form-text">Hold Ctrl (Cmd on Mac) to select multiple.</div>
+        </div>
       </div>
-      <div class="modal-footer"><button class="btn btn-primary" type="submit">Save</button></div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit" formmethod="post">Save</button></div>
     </form>
   </div></div>
 </div>
@@ -130,6 +159,7 @@ block header_title %}Programme Logging{% endblock %} {% block content %}
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const table = document.getElementById("programmesTable");
+    const addBtn = document.getElementById("programmeAddBtn");
     const editBtn = document.getElementById("programmeEditBtn");
     const deleteBtn = document.getElementById("programmeDeleteBtn");
     let selected = null;
@@ -142,6 +172,9 @@ block header_title %}Programme Logging{% endblock %} {% block content %}
       editBtn.disabled = false;
       deleteBtn.disabled = false;
     });
+    addBtn?.addEventListener("click", () => {
+      new bootstrap.Modal(document.getElementById("programmeAddModal")).show();
+    });
     editBtn?.addEventListener("click", () => {
       if (!selected) return;
       document.getElementById("programmeEditTitle").value = selected.dataset.title;
@@ -153,6 +186,10 @@ block header_title %}Programme Logging{% endblock %} {% block content %}
       document.getElementById("programmeEditStart").value = selected.dataset.startTime;
       document.getElementById("programmeEditEnd").value = selected.dataset.endTime;
       document.getElementById("programmeEditLab").value = selected.dataset.labId;
+      const facilitatorIds = (selected.dataset.facilitatorIds || "").split(",").filter(Boolean);
+      document.getElementById("programmeEditFacilitators").querySelectorAll("option").forEach((opt) => {
+        opt.selected = facilitatorIds.includes(opt.value);
+      });
       document.getElementById("programmeEditForm").action = `/programmes/${selected.dataset.id}/update`;
       new bootstrap.Modal(document.getElementById("programmeEditModal")).show();
     });
@@ -161,6 +198,33 @@ block header_title %}Programme Logging{% endblock %} {% block content %}
       const form = document.getElementById("programmeDeleteForm");
       form.action = `/programmes/${selected.dataset.id}/delete`;
       form.submit();
+    });
+
+    // Submit the edit form via an explicit POST fetch. Relying on the native
+    // form submission proved fragile (it could intermittently be issued as a
+    // GET, producing a 405 "Method Not Allowed"). fetch guarantees POST and
+    // FormData serialises every selected facilitator, so multiple facilitators
+    // save reliably.
+    const editForm = document.getElementById("programmeEditForm");
+    editForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!editForm.reportValidity()) return;
+      const saveBtn = editForm.querySelector('button[type="submit"]');
+      if (saveBtn) saveBtn.disabled = true;
+      try {
+        await fetch(editForm.action, {
+          method: "POST",
+          body: new FormData(editForm),
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          credentials: "same-origin",
+          redirect: "manual",
+        });
+      } catch (err) {
+        /* fall through to reload so the user always sees current state */
+      }
+      // The POST set a flash message in the session; navigating shows it and
+      // renders the freshly updated table.
+      window.location.href = "{{ url_for('programmes.index') }}";
     });
   });
 </script>

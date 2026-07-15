@@ -19,6 +19,9 @@ class User(UserMixin, db.Model):
     attendance_logs = db.relationship("AttendanceLog", back_populates="user", cascade="all, delete-orphan")
     assets_created = db.relationship("Asset", back_populates="creator", foreign_keys="Asset.created_by")
     programmes_created = db.relationship("Programme", back_populates="creator", foreign_keys="Programme.created_by")
+    programmes_facilitated = db.relationship(
+        "Programme", secondary="programme_facilitators", back_populates="facilitators"
+    )
     announcements_created = db.relationship("Announcement", back_populates="creator", foreign_keys="Announcement.created_by")
 
     def set_password(self, password: str) -> None:

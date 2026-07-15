@@ -86,7 +86,7 @@ def export_report_excel(report_type, province_id=None, lab_id=None, start_date=N
             query = query.filter(Programme.date >= start_date)
         if end_date:
             query = query.filter(Programme.date <= end_date)
-        raw.append(["Title", "Objective", "Target Audience", "Attendance Count", "Activities Done", "Date", "Start", "End", "Lab", "Province"])
+        raw.append(["Title", "Objective", "Target Audience", "Attendance Count", "Activities Done", "Date", "Start", "End", "Lab", "Province", "Facilitated By"])
         for programme in query.order_by(Programme.date).all():
             raw.append([
                 programme.title,
@@ -99,6 +99,7 @@ def export_report_excel(report_type, province_id=None, lab_id=None, start_date=N
                 programme.end_time.strftime("%H:%M"),
                 programme.lab.name,
                 programme.lab.province.name,
+                ", ".join(user.full_name for user in programme.facilitators),
             ])
 
     elif report_type == "labs":

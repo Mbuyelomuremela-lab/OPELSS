@@ -157,7 +157,13 @@ async function submitAjaxForm(event) {
   const formData = new FormData(form);
   const payload = {};
   formData.forEach((value, key) => {
-    payload[key] = value;
+    const field = form.elements.namedItem(key);
+    const isMultiValue = field && field.tagName === "SELECT" && field.multiple;
+    if (isMultiValue) {
+      payload[key] = Array.isArray(payload[key]) ? [...payload[key], value] : [value];
+    } else {
+      payload[key] = value;
+    }
   });
 
   try {
