@@ -1,271 +1,234 @@
 # OPELSS
 
-**OPELSS** (OAU E-Learning Lab Support System) is a role-based Flask web application that
-centralises the day-to-day operations of the ODeL Acceleration Unit's network of e-learning
-labs — attendance, assets, visitors, programmes, enquiries, announcements and reporting — in
-one place, with data visible to HQ in real time instead of being consolidated by hand each month.
+**OPELSS** (OAU E-Learning Lab Support System) is the web application the ODeL Acceleration Unit
+uses to run its network of e-learning labs. Lab trainees clock in, log visitors, track equipment,
+record community programmes and escalate student enquiries; HQ sees all of it live and exports
+reports in one click, instead of consolidating spreadsheets by hand every month.
 
-📚 Full documentation lives in [`docs/`](docs/) — including the [business case](docs/business-case.docx),
-[API reference](docs/api-documentation.md), [ERD](docs/erd.md), [permissions matrix](docs/permissions-matrix.md),
-and the [training manuals](docs/manuals/).
+Flask · PostgreSQL · Bootstrap 5 · hosted on Azure.
 
 ---
 
-## Features
+## Run it locally
 
-**Attendance**
-- Geolocation-enforced clock-in/out — a trainee can only clock in within a configured radius of their assigned lab.
-- Early-departure reason capture.
-- Monthly PDF timesheet export.
-- Times recorded in South African Standard Time (SAST).
-
-**Assets**
-- Register lab equipment by name, category, serial/tag number and status.
-- Filter by category, status, lab and province.
-- Export to Excel with the on-screen filters applied.
-
-**Visitors**
-- Log each visitor with name, category, student number, cellphone, purpose and date.
-- Filter by category, date range, lab and province.
-- Export to Excel with filters applied.
-
-**Programmes**
-- Log community programmes with objective, target audience, attendance, activities, date and times.
-- **Facilitators audit trail** — records every person who ran a programme (separate from whoever captured it).
-- Filter by date range, lab, province and facilitator.
-- Export to Excel with filters applied.
-
-**Enquiries**
-- Capture and escalate student enquiries with an auto-generated tracking number.
-- Workflow states with timestamps (escalated, assigned, in progress, resolved, closed).
-- **Public tracker** — students check status by reference number, no login required.
-
-**Announcements**
-- Posted by Admin with an expiry date; shown on the public landing page until they expire.
-
-**Reports**
-- One-click Excel export by report type (attendance, assets, visitors, programmes, labs, provinces),
-  filtered by province and lab.
-
-**Administration**
-- Manage users, roles, labs, provinces and lab geo-coordinates.
-- **Audit log** of create/update/delete activity across the system.
-
----
-
-## Roles
-
-OPELSS has three authenticated roles plus unauthenticated public access.
-
-| Role | Scope of data | Primary purpose |
-| --- | --- | --- |
-| **Lab Trainee** | Their assigned lab only | Run the day-to-day operations of one lab. |
-| **HQ Trainee** | All labs, all provinces | Oversee and support labs from HQ; reporting. |
-| **Admin** | Everything | Full control, including user and lab administration. |
-| **Public** (no login) | Public pages only | Students tracking an enquiry or reading announcements. |
-
-### What each role can do
-
-| Function | Lab Trainee | HQ Trainee | Admin | Public |
-| --- | :---: | :---: | :---: | :---: |
-| Clock in / out (geolocation) | ✅ own lab | ⚠️ any user with an assigned lab | ⚠️ any user with an assigned lab | — |
-| Export own timesheet (PDF) | ✅ | ✅ | ✅ | — |
-| Assets — add / edit / delete | ✅ own lab | ✅ all | ✅ all | — |
-| Visitors — log / edit / delete | ✅ own lab | ✅ all | ✅ all | — |
-| Programmes — log / edit / delete | ✅ own lab | ✅ all | ✅ all | — |
-| Excel export (assets/visitors/programmes) | — | ✅ | ✅ | — |
-| Enquiries — raise / escalate | ✅ | — | — | — |
-| Enquiries — work (start / resolve) | — | ✅ assigned to them | ✅ any | — |
-| Enquiries — assign / close / reopen | — | — | ✅ | — |
-| Track an enquiry by reference number | — | — | — | ✅ |
-| Reports — generate exports | — | ✅ | ✅ | — |
-| Announcements — create / manage | — | ✅ | ✅ | 👁 view |
-| Users, labs, provinces — administer | — | — | ✅ | — |
-| Audit log | — | — | ✅ | — |
-
-> ⚠️ Attendance routes are guarded by login only — no role check. Having an `assigned_lab` is
-> what gates them in practice. See [docs/permissions-matrix.md](docs/permissions-matrix.md).
-
-> A precise, route-by-route breakdown is in [docs/permissions-matrix.md](docs/permissions-matrix.md).
-
----
-
-## Tech stack
-
-| Layer | Technology |
-| --- | --- |
-| Language | Python 3.11.8 |
-| Framework | Flask (blueprint-per-module) |
-| ORM / migrations | SQLAlchemy, Flask-Migrate (Alembic) |
-| Auth | Flask-Login, Flask-WTF (CSRF) |
-| Database | PostgreSQL in production, SQLite for local development |
-| Frontend | Jinja2 templates, Bootstrap 5, vanilla JS |
-| Exports | OpenPyXL (Excel), ReportLab (PDF) |
-| Server | Gunicorn |
-| Hosting | Azure App Service + Azure Database for PostgreSQL |
-
----
-
-## Getting started
-
-### Prerequisites
-
-- Python **3.11.8** (see [`runtime.txt`](runtime.txt))
-- Git
-
-### Installation
+You need **Python 3.11.8** and **Git**. Nothing else — it defaults to a local SQLite database,
+so there is no database server to install.
 
 ```bash
-# 1. Clone the repository
 git clone git@github.com:Mbuyelomuremela-lab/OPELSS.git
 cd OPELSS
 
-# 2. Create and activate a virtual environment
 python3 -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
-# 3. Install dependencies
 pip install -r requirements.txt
-```
 
-### Configuration
+echo "SECRET_KEY=dev-secret-not-for-production" > .env
 
-Create a `.env` file in the project root:
-
-```bash
-# Required — used to sign sessions and CSRF tokens. Use a long random value.
-SECRET_KEY=your-secret-key-here
-
-# Optional — omit to use a local SQLite database at instance/app.db
-DATABASE_URL=postgresql://user:password@host:5432/dbname?sslmode=require
-
-# Optional
-UPLOAD_FOLDER=uploads        # where announcement images are stored
-FLASK_ENV=development        # "production" enables secure cookies
-FLASK_DEBUG=1                # enables the Flask debugger and reloader
-PORT=5000                    # port for `python run.py`
-```
-
-| Variable | Required | Default | Purpose |
-| --- | :---: | --- | --- |
-| `SECRET_KEY` | ✅ | `change-this-secret-key` | Session and CSRF signing. **Must** be set in production. |
-| `DATABASE_URL` | — | SQLite at `instance/app.db` | Database connection. `postgres://` is normalised to `postgresql://` automatically. |
-| `UPLOAD_FOLDER` | — | `uploads/` | Announcement image uploads. |
-| `FLASK_ENV` | — | `production` | Set to `development` locally to relax secure-cookie enforcement. |
-| `FLASK_DEBUG` | — | `0` | Set to `1` for the debugger and auto-reload. |
-| `PORT` | — | `5000` | Port used by `python run.py`. |
-
-### Database setup
-
-Migrations already exist in [`migrations/`](migrations/), so apply them rather than initialising:
-
-```bash
-flask --app run db upgrade
-```
-
-> The app also runs `db.create_all()` on startup, so a fresh SQLite database is created
-> automatically on first run. Migrations matter when **adding columns to existing tables**,
-> which `create_all()` cannot do.
-
-### Run it
-
-```bash
 python run.py
 ```
 
-The app is served at <http://localhost:5000> (or `PORT`).
+Open <http://localhost:5000>.
 
-On first run a default administrator is seeded:
+That's it. On first run the app creates `instance/app.db` and seeds it, so you get a working
+system with data already in it — no migration or fixture step needed.
+
+### Log in
+
+The seed creates one administrator:
 
 | Email | Password |
 | --- | --- |
 | `admin@opelss.com` | `Admin@123` |
 
-> ⚠️ **Change this password immediately** on any deployment reachable by anyone else.
-> The seed only creates the account if it does not already exist.
+Log in with that and you have the run of the system.
 
-Lab Trainee login requires the browser to grant **geolocation** access.
+> **Change this password on anything other than your own machine.** The seed runs on every
+> startup and creates this account if it is missing — including in production.
+
+### ⚠️ You cannot log in as a Lab Trainee without faking your location
+
+This trips everyone up. Lab Trainee login is **geo-fenced**: the browser sends your coordinates
+and the server rejects the login unless you are within the lab's radius. The seeded **"Main Lab"
+sits at latitude 0, longitude 0** — a spot in the Atlantic Ocean — so a real browser will never
+be close enough, and you will just be told you must be inside your lab radius.
+
+Pick whichever you prefer:
+
+**Option A — move the lab to you** (persists, best for ongoing work)
+
+Log in as admin → **Admin** → **Labs** → edit **Main Lab** → set its latitude/longitude to your
+own, or set `radius_meters` to something enormous.
+
+**Option B — fake your location in the browser** (nothing to change in the app)
+
+Chrome DevTools → ⋮ → More tools → **Sensors** → **Location** → *Other…* → enter `0`, `0`.
+
+**Option C — move the lab to you from the shell**
+
+```bash
+python3 -c "
+from run import app
+from app.extensions import db
+from app.models.lab import Lab
+with app.app_context():
+    lab = Lab.query.filter_by(name='Main Lab').first()
+    lab.radius_meters = 20000000      # effectively the whole planet
+    db.session.commit()
+    print('Main Lab radius widened — any location will now clock in')
+"
+```
+
+Admin and HQ Trainee logins are **not** geo-fenced, so you only hit this when testing the Lab
+Trainee experience.
+
+### What the seed gives you
+
+| | |
+| --- | --- |
+| Province | Headquarters |
+| Lab | Main Lab — at `0, 0`, radius 1000 m |
+| User | `admin@opelss.com` / `Admin@123` (Admin) |
+
+Everything else — more labs, users, assets, visitors, programmes — you create through the UI as
+an admin.
+
+### Run the tests
+
+```bash
+python -m unittest discover tests
+```
+
+There is one test, covering database initialisation. `pytest` is not a dependency, so use
+`unittest`.
+
+### Useful environment variables
+
+Only `SECRET_KEY` really matters locally. Everything else has a working default.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `SECRET_KEY` | `change-this-secret-key` | Signs sessions and CSRF tokens. Set it. |
+| `DATABASE_URL` | SQLite at `instance/app.db` | Point at PostgreSQL to use one. `postgres://` is rewritten to `postgresql://` for you. |
+| `FLASK_DEBUG` | `0` | `1` for the debugger and auto-reload. |
+| `PORT` | `5000` | Port for `python run.py`. |
+| `FLASK_ENV` | `production` | `development` relaxes secure-cookie enforcement. |
+| `UPLOAD_FOLDER` | `uploads/` | Where announcement posters are stored. |
+
+### Things worth knowing before you change code
+
+- **Times are SAST, not UTC.** The server runs in UTC but everyone using it is in South Africa.
+  Always use `sast_now()` / `sast_today()` from `app/utils.py` — never `datetime.now()`,
+  `utcnow()` or `date.today()`.
+- **The database is created two ways.** `db.create_all()` runs on every startup and creates any
+  *missing tables*, which is why a fresh clone just works. It cannot alter existing tables, so
+  **adding a column to an existing table needs a migration**:
+  ```bash
+  flask --app run db migrate -m "what you changed"
+  flask --app run db upgrade
+  ```
+  Adding a whole new table needs no migration to work locally — but write one anyway so
+  production stays reproducible.
+- **Templates are cached.** `python run.py` without `FLASK_DEBUG=1` caches compiled templates,
+  so edits to `.html` will not appear until you restart. Set `FLASK_DEBUG=1` to avoid this.
+- **Lab Trainees only ever see their own lab.** Most modules filter on `assigned_lab_id`. If a
+  record "disappears", check which lab the logged-in user belongs to.
+
+---
+
+## How the system fits together
+
+Each feature is a Flask blueprint under `app/`, with its own routes, forms, services and
+templates. They all follow the same shape, so once you have read one you can read them all.
+
+| Blueprint | URL | What it does |
+| --- | --- | --- |
+| `auth` | `/` | Landing page, login (geo-fenced for Lab Trainees), logout. |
+| `dashboard` | `/dashboard` | A different dashboard per role. |
+| `attendance` | `/attendance` | Geolocation clock-in/out, PDF timesheets. |
+| `assets` | `/assets` | Equipment register per lab. |
+| `visitors` | `/visitors` | Visitor log per lab. |
+| `programmes` | `/programmes` | Community programmes, and who facilitated them. |
+| `enquiries` | `/enquiries` | Student enquiries, plus a public tracker needing no login. |
+| `announcements` | `/announcements` | Notices on the public landing page. |
+| `reports` | `/reports` | One-click Excel exports. |
+| `admin` | `/admin` | Users, labs, provinces. |
+| `audit` | `/audit` | Who created, changed or deleted what. |
+
+### The three roles, briefly
+
+- **Lab Trainee** — runs one lab. Sees only their own lab's data.
+- **HQ Trainee** — sees every lab. Handles enquiries, announcements and reporting.
+- **Admin** — everything, plus users, labs and the audit log.
+
+Plus the **public**: students track an enquiry by reference number and read announcements without
+an account.
+
+→ Exactly who can do what: **[docs/permissions-matrix.md](docs/permissions-matrix.md)**
+
+### Where the data lives
+
+Everything hangs off **labs**. Assets, visitors, programmes, enquiries and attendance all carry a
+`lab_id`, which is what makes "Lab Trainees see only their own lab" possible.
+
+→ Full schema and diagram: **[docs/erd.md](docs/erd.md)**
 
 ---
 
 ## Deployment
 
-OPELSS deploys to **Azure App Service**.
+Push to `main` and it deploys itself — [`.github/workflows/main_opelss.yml`](.github/workflows/main_opelss.yml)
+builds and ships to the `opelss` Azure Web App.
 
-- **Trigger** — pushing to `main` runs [`.github/workflows/main_opelss.yml`](.github/workflows/main_opelss.yml),
-  which builds and deploys to the `opelss` Azure Web App.
-- **Startup command** (configured in the Azure Portal → Configuration → Startup Command) applies
-  pending migrations before starting the server:
-  ```bash
-  flask --app run db upgrade && gunicorn wsgi:app
-  ```
-- **Process definition** — [`Procfile`](Procfile): `gunicorn wsgi:app`
-- **Python version** — pinned by [`runtime.txt`](runtime.txt).
+The **startup command**, set in the Azure Portal (Configuration → Startup Command), applies any
+pending migrations before booting the server:
 
-### Production environment variables
+```bash
+flask --app run db upgrade && gunicorn wsgi:app
+```
 
-Set these in Azure Portal → Configuration → Application settings:
+So a migration you commit is applied automatically on the next deploy — you do not have to run
+anything by hand.
+
+Production settings live in Azure Portal → Configuration → Application settings:
 
 | Variable | Value |
 | --- | --- |
-| `SECRET_KEY` | A long, random secret. |
-| `DATABASE_URL` | The Azure PostgreSQL connection string (`?sslmode=require`). |
+| `SECRET_KEY` | A long random secret. |
+| `DATABASE_URL` | The Azure PostgreSQL connection string, with `?sslmode=require`. |
 | `FLASK_ENV` | `production` |
 
 ---
 
-## Project structure
+## Project layout
 
 ```
-OPELSS/
-├── app/
-│   ├── __init__.py          # app factory, blueprint registration, seed data
-│   ├── models/              # SQLAlchemy models
-│   ├── auth/                # login, logout, password change
-│   ├── dashboard/           # role-specific dashboards
-│   ├── attendance/          # geolocation clock-in/out, timesheets
-│   ├── assets/              # asset register
-│   ├── visitors/            # visitor log
-│   ├── programmes/          # programme log + facilitators
-│   ├── enquiries/           # enquiry workflow + public tracker
-│   ├── announcements/       # announcements
-│   ├── reports/             # Excel report exports
-│   ├── admin/               # users, labs, provinces
-│   ├── audit/               # audit log
-│   ├── templates/           # Jinja2 templates
-│   ├── static/              # CSS, JS, images
-│   └── utils.py             # role decorators, SAST time helpers
-├── docs/                    # project documentation
-├── migrations/              # Alembic migrations
-├── tests/
-├── config.py                # configuration classes
-├── run.py                   # local entry point
-├── wsgi.py                  # WSGI entry point (Gunicorn)
-└── requirements.txt
+app/
+├── __init__.py          # app factory, blueprint registration, seed_data()
+├── models/              # SQLAlchemy models — one file per table
+├── utils.py             # role_required decorator, sast_now()/sast_today()
+├── extensions.py        # db, login_manager
+├── templates/           # Jinja2 — base.html plus one folder per blueprint
+├── static/              # css/app.css, js/main.js
+└── <blueprint>/         # routes.py, forms.py, services.py per feature
+config.py                # Config / DevelopmentConfig / ProductionConfig
+run.py                   # local entry point  → python run.py
+wsgi.py                  # production entry point → gunicorn wsgi:app
+migrations/              # Alembic
+docs/                    # documentation
 ```
 
-### Modules and URL prefixes
-
-| Blueprint | Prefix | Purpose |
-| --- | --- | --- |
-| `auth` | `/` | Landing page, login, logout. |
-| `dashboard` | `/dashboard` | Role-specific dashboard. |
-| `attendance` | `/attendance` | Clock in/out, timesheets. |
-| `assets` | `/assets` | Asset register. |
-| `visitors` | `/visitors` | Visitor log. |
-| `programmes` | `/programmes` | Programme log and facilitators. |
-| `enquiries` | `/enquiries` | Enquiry workflow and public tracker. |
-| `announcements` | `/announcements` | Announcement management. |
-| `reports` | `/reports` | Report exports. |
-| `admin` | `/admin` | User, lab and province administration. |
-| `audit` | `/audit` | Audit log. |
+Business logic lives in each blueprint's `services.py`, not in `routes.py` — routes stay thin and
+handle HTTP, services do the work and are the part worth testing.
 
 ---
 
-## Conventions
+## Documentation
 
-- **Times are SAST.** Use `sast_now()` / `sast_today()` from `app/utils.py` for the current
-  time — never `datetime.now()`, `utcnow()` or `date.today()`, because the server runs in UTC
-  while users are in South Africa.
-- **Roles** are enforced with the `role_required(...)` decorator in `app/utils.py`; Lab Trainees
-  are additionally scoped to `assigned_lab_id` within each module.
+| | |
+| --- | --- |
+| [Business case](docs/business-case.docx) | Why OPELSS exists, scope, costs, schedule. For stakeholders. |
+| [API documentation](docs/api-documentation.md) | Every route, who may call it, what it takes and returns. |
+| [ERD](docs/erd.md) | Database schema and relationships. |
+| [Permissions matrix](docs/permissions-matrix.md) | What each role may do. |
+| [Training manuals](docs/manuals/) | End-user guides, one per role. |
