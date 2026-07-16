@@ -1,260 +1,283 @@
-# OPELSS API Documentation
+# OPELSS Routes
 
-Reference for every HTTP route exposed by OPELSS, the roles permitted to call it, its
-parameters and its responses.
-
-OPELSS is a server-rendered Flask application rather than a REST API — most routes return
-HTML or a redirect. A subset of routes additionally accept and return **JSON** so the UI can
-submit forms without a page reload; those are marked **JSON** and documented in
-[JSON endpoints](#json-endpoints).
-
-- **Base URL (production):** the Azure App Service host for the `opelss` web app
-- **Base URL (local):** `http://localhost:5000`
+Every URL the application answers on, who is allowed to call it, and what comes back.
 
 ---
 
-## Conventions
+## First, the thing that surprises people
 
-### Authentication
+**OPELSS is not a REST API.** It is a server-rendered Flask app. Most routes return an HTML page
+or a redirect, not JSON. There is no token auth, no `/api/v1/` prefix, and no versioning.
 
-Session-cookie based, via Flask-Login. Unauthenticated requests to a protected route are
-redirected to `/login`.
+What it *does* have is a handful of routes that answer **either** HTML **or** JSON depending on
+how you ask, so the UI can submit a form without reloading the page. Those are marked **JSON**
+below and explained in [Talking JSON](#talking-json).
 
-### Authorisation
+So if you came looking for an API to integrate against: it isn't one. If you came to find out
+what happens when a button is clicked: read on.
 
-| Marker | Meaning |
+---
+
+## How every route works
+
+Three things are true of nearly all of them.
+
+**1. You are identified by a session cookie.** Flask-Login. No token. Not logged in and you hit
+a protected route? You are bounced to `/login`.
+
+**2. Every POST needs a CSRF token.** Either a `csrf_token` form field, or an `X-CSRFToken`
+header if you are sending JSON. Without it you get a 400.
+
+**3. A successful POST redirects; it does not return a body.** The classic form pattern: POST,
+then `302` back to the module's index, with a flash message that renders as a toast. The JSON
+routes are the exception.
+
+### Reading the access column
+
+| | |
 | --- | --- |
-| 🌐 **Public** | No login required. |
-| 🔒 **Any** | Any authenticated user. |
-| **Admin** | Admins only. |
-| **HQ Trainee** | HQ Trainees only. |
-| **Lab Trainee** | Lab Trainees only. |
-| **own lab** | Lab Trainees are restricted to their `assigned_lab_id`; Admin and HQ Trainee see all labs. |
+| 🌐 | Anyone. No login. |
+| 🔒 | Any logged-in user. |
+| 🔸 | Any logged-in user, **but Lab Trainees only see their own lab.** |
+| 👑 | Admin only. |
+| 🗂️👑 | HQ Trainee and Admin. |
+| 🔧 | Lab Trainee only. |
 
-Roles are enforced either by the `role_required(...)` decorator (`app/utils.py`) or by an
-explicit check inside the view. A failed authorisation returns **403 Forbidden**.
+Anything you are not allowed to do returns **403**. Full reasoning behind these:
+[permissions matrix](permissions-matrix.md).
 
-### CSRF
+---
 
-All `POST` routes require a CSRF token (Flask-WTF). Send it either as a `csrf_token` form
-field or an `X-CSRFToken` header for JSON requests.
+## Getting in and out
 
-### Responses
+| | Route | Who | What happens |
+| --- | --- | :---: | --- |
+| `GET` | `/` | 🌐 | The public landing page — announcements carousel and the enquiry tracker. |
+| `GET` `POST` | `/login` | 🌐 | Sign in. Posts `email`, `password`, and `latitude`/`longitude`. |
+| `GET` | `/logout` | 🔒 | Ends the session. |
+| `GET` `POST` | `/reset-password` | 🔒 | Change your own password. |
+| `GET` | `/dashboard/` | 🔒 | A different dashboard per role. An unrecognised role gets a 403. |
 
-| Type | Behaviour |
+> **Why does login take coordinates?** Because a **Lab Trainee** can only sign in from inside
+> their lab. The server measures the distance to the lab and refuses if you are outside
+> `radius_meters`. Admins and HQ Trainees are not geo-fenced, so their coordinates are ignored.
+
+---
+
+## Attendance
+
+| | Route | Who | What happens |
+| --- | --- | :---: | --- |
+| `GET` | `/attendance/` | 🔒 | Your attendance page and clock-in/out buttons. |
+| `POST` | `/attendance/clock-in` | 🔒 | Starts your day. Needs `latitude`, `longitude`. |
+| `POST` | `/attendance/clock-out` | 🔒 | Ends it. Needs coordinates, plus a reason if you are leaving early. |
+| `GET` | `/attendance/export-timesheet` | 🔒 | Your month as a **PDF**. |
+
+Clock-in is rejected outside the lab's radius, exactly like login.
+
+> ⚠️ **These have no role check** — just `login_required`. In practice what stops most people is
+> not having an assigned lab. The seeded Admin *does* have one, so an Admin can clock in. See
+> [permissions matrix](permissions-matrix.md#two-things-worth-a-second-look).
+
+Times are stored in **SAST**, not UTC.
+
+---
+
+## The three registers
+
+Assets, visitors and programmes are **the same page three times**. Same layout, same buttons,
+same rules — only the fields differ. Learn one and you know all three.
+
+```
+/<thing>/                    the list, with filters
+/<thing>/create              add one                     JSON
+/<thing>/<id>/update         change one
+/<thing>/<id>/delete         remove one
+/<thing>/export              download the filtered list as Excel
+```
+
+| | Route | Who | Notes |
+| --- | --- | :---: | --- |
+| `GET` | `/assets/` `/visitors/` `/programmes/` | 🔸 | The register. Lab Trainees see only their lab. |
+| `POST` | `/…/create` | 🔸 | **JSON** — the "Add" modal posts here. |
+| `POST` | `/…/<id>/update` | 🔸 | |
+| `POST` | `/…/<id>/delete` | 🔸 | |
+| `GET` | `/…/export` | 🗂️👑 | Excel, honouring whatever filters are in the query string. |
+
+**Export is HQ and Admin only.** A Lab Trainee can use the page but cannot download from it.
+
+### What each one filters on
+
+| Register | Filters |
 | --- | --- |
-| HTML | Rendered page. |
-| Redirect | `302` back to the module's index, with a flash message shown as a toast. |
-| JSON | `{"success": true/false, "message": "..."}` plus route-specific fields. |
-| File | `.xlsx` or `.pdf` as an attachment (`Content-Disposition: attachment`). |
+| **Assets** | `category`, `status`, `lab_id`, `province_id` |
+| **Visitors** | `category`, `date_from`, `date_to`, `lab_id`, `province_id` |
+| **Programmes** | `date_from`, `date_to`, `lab_id`, `province_id`, **`facilitator_id`** |
 
-### Status codes
+`lab_id` and `province_id` are only shown to HQ and Admin — a Lab Trainee has nothing to filter,
+they only have one lab.
 
-| Code | Meaning |
-| --- | --- |
-| `200` | Success. |
-| `302` | Redirect (usually after a successful `POST`). |
-| `400` | Validation failure (JSON requests). |
-| `403` | Role or lab-scope not permitted. |
-| `404` | Record not found. |
-| `405` | Method not allowed. |
+### Fields
 
----
+<details>
+<summary><b>Assets</b></summary>
 
-## Authentication (`/`)
+`asset_name`, `category`, `serial_number` (unique — the UNISA tag), `status`, `lab_id`
 
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/` | 🌐 Public | Landing page: active announcements carousel and the enquiry tracking form. |
-| `GET`, `POST` | `/login` | 🌐 Public | Staff login. `POST` accepts `email`, `password`, and optional `latitude`/`longitude` for geolocation. |
-| `GET` | `/logout` | 🔒 Any | Ends the session and redirects to the landing page. |
-| `GET`, `POST` | `/reset-password` | 🔒 Any | Change the signed-in user's own password. |
+</details>
 
----
+<details>
+<summary><b>Visitors</b></summary>
 
-## Dashboard (`/dashboard`)
+`visitor_name`, `category`, `student_number`, `cellphone_number`, `purpose`, `visit_date`, `lab_id`
 
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/dashboard/` | 🔒 Any | Role-specific dashboard. Admin and HQ Trainee get cross-lab metrics; Lab Trainees get their own lab. Returns `403` for an unrecognised role. |
+</details>
 
----
+<details>
+<summary><b>Programmes</b></summary>
 
-## Attendance (`/attendance`)
+`title`, `objective`, `target_audience`, `attendance_count`, `activities_done`, `date`,
+`start_time`, `end_time`, `lab_id`, `facilitators`
 
-> **Note:** these routes are guarded by login only — there is **no role check**. What gates them
-> in practice is `assigned_lab`: a user without an assigned lab cannot clock in or out. They are
-> intended for Lab Trainees.
+**`facilitators` is repeated once per person selected** — it is a multi-select. At least one is
+required. It records *who ran* the programme, which is not the same as `created_by`
+(who typed it in), and that distinction is the whole point of the field.
 
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/attendance/` | 🔒 Any | Attendance overview and clock-in/out controls for the signed-in user. |
-| `POST` | `/attendance/clock-in` | 🔒 Any (needs assigned lab) | Records a clock-in. Requires `latitude` and `longitude`; rejected if outside the lab's configured radius. |
-| `POST` | `/attendance/clock-out` | 🔒 Any (needs assigned lab) | Records a clock-out. Requires `latitude`/`longitude`, plus an early-departure reason when leaving before the scheduled end. |
-| `GET` | `/attendance/export-timesheet` | 🔒 Any | Monthly timesheet as a **PDF** attachment. |
+**`start_time` / `end_time` accept both `HH:MM` and `HH:MM:SS`** — deliberately, because the
+edit form pre-fills with seconds and the browser sends them back.
 
-Times are stored in **South African Standard Time (SAST)**.
+</details>
 
 ---
 
-## Assets (`/assets`)
+## Enquiries
 
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/assets/` | 🔒 Any — **own lab** | Asset register. Query filters: `category`, `status`, `lab_id`, `province_id` (lab/province for Admin and HQ Trainee). |
-| `POST` | `/assets/create` | 🔒 Any — **own lab** | Create an asset. **JSON** capable. |
-| `POST` | `/assets/<asset_id>/update` | 🔒 Any — **own lab** | Update an asset. |
-| `POST` | `/assets/<asset_id>/delete` | 🔒 Any — **own lab** | Delete an asset. |
-| `GET` | `/assets/export` | **Admin**, **HQ Trainee** | Excel export honouring `category`, `status`, `lab_id`, `province_id`. Returns `assets_export.xlsx`. |
+The one module where the roles hand off to each other, so the routes split along those lines.
 
-**Asset fields:** `asset_name`, `category`, `serial_number`, `status`, `lab_id`.
+**A lab raises it:**
 
----
+| | Route | Who | What happens |
+| --- | --- | :---: | --- |
+| `GET` | `/enquiries/` | 🔸 | The list. |
+| `POST` | `/enquiries/create` | 🔧 | Raise one. A tracking number is generated. **JSON** |
+| `POST` | `/enquiries/<enquiry_id>/edit` | 🔧 | Only while still `Open`. |
+| `POST` | `/enquiries/<enquiry_id>/delete` | 🔧 | Only while still `Open`. |
 
-## Visitors (`/visitors`)
+**An admin directs it:**
 
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/visitors/` | 🔒 Any — **own lab** | Visitor log. Query filters: `category`, `date_from`, `date_to`, `lab_id`, `province_id`. |
-| `POST` | `/visitors/create` | 🔒 Any — **own lab** | Log a visitor. **JSON** capable. |
-| `POST` | `/visitors/<visitor_id>/update` | 🔒 Any — **own lab** | Update a visitor record. |
-| `POST` | `/visitors/<visitor_id>/delete` | 🔒 Any — **own lab** | Delete a visitor record. |
-| `GET` | `/visitors/export` | **Admin**, **HQ Trainee** | Excel export honouring the same filters. |
+| | Route | Who | What happens |
+| --- | --- | :---: | --- |
+| `POST` | `/enquiries/<enquiry_id>/assign` | 👑 | Hand it to an HQ Trainee. |
+| `POST` | `/enquiries/<enquiry_id>/reassign` | 👑 | Hand it to someone else. |
+| `POST` | `/enquiries/<enquiry_id>/close` | 👑 | Done with. |
+| `POST` | `/enquiries/<enquiry_id>/reopen` | 👑 | Not done with after all. |
 
-**Visitor fields:** `visitor_name`, `category`, `student_number`, `cellphone`, `purpose`, `visit_date`, `lab_id`.
+**HQ works it:**
 
----
+| | Route | Who | What happens |
+| --- | --- | :---: | --- |
+| `POST` | `/enquiries/<enquiry_id>/start` | 🗂️👑 | Picking it up. |
+| `POST` | `/enquiries/<enquiry_id>/resolve` | 🗂️👑 | Solved, with a note. |
+| `POST` | `/enquiries/<enquiry_id>/not-resolved` | 🗂️👑 | Couldn't solve it, with a reason. |
 
-## Programmes (`/programmes`)
+> HQ Trainees can only act on enquiries **assigned to them**. Admins can act on any.
 
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/programmes/` | 🔒 Any — **own lab** | Programme register. Query filters: `date_from`, `date_to`, `lab_id`, `province_id`, `facilitator_id`. |
-| `POST` | `/programmes/create` | 🔒 Any — **own lab** | Log a programme. **JSON** capable. |
-| `POST` | `/programmes/<programme_id>/update` | 🔒 Any — **own lab** | Update a programme, including its facilitators. |
-| `POST` | `/programmes/<programme_id>/delete` | 🔒 Any — **own lab** | Delete a programme. |
-| `GET` | `/programmes/export` | **Admin**, **HQ Trainee** | Excel export honouring `date_from`, `date_to`, `lab_id`, `province_id`, `facilitator_id`. Returns `programmes_export.xlsx`. |
+**The student watches:**
 
-**Programme fields:** `title`, `objective`, `target_audience`, `attendance_count`,
-`activities_done`, `date`, `start_time`, `end_time`, `lab_id`, `facilitators` (repeated field —
-one value per selected facilitator).
+| | Route | Who | What happens |
+| --- | --- | :---: | --- |
+| `GET` `POST` | `/enquiries/track` | 🌐 | Post a `tracking_number`, see the status. **No login.** |
 
-**Facilitators.** `facilitators` is a many-to-many link to users, recording *who ran* the
-programme. It is distinct from `created_by`, which records who captured the record. At least
-one facilitator is required.
+**Fields:** `student_name`, `student_number`, `category`, `description`, `escalation_reason`, `lab_id`
 
-**Time format.** `start_time` and `end_time` accept `HH:MM` or `HH:MM:SS`.
+**Status:** `Open → Assigned → In Progress → Resolved`/`Not Resolved` `→ Closed`, each transition
+timestamped so you can measure how long it sat at each step.
 
 ---
 
-## Enquiries (`/enquiries`)
+## Announcements
 
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/enquiries/` | 🔒 Any — **own lab** | Enquiry list. Lab Trainees see their own lab's enquiries. |
-| `POST` | `/enquiries/create` | **Lab Trainee** | Raise and escalate an enquiry; a tracking number is generated. **JSON** capable. |
-| `POST` | `/enquiries/<enquiry_id>/edit` | **Lab Trainee** — own lab | Edit an enquiry. Only while status is `Open`. |
-| `POST` | `/enquiries/<enquiry_id>/delete` | **Lab Trainee** — own lab | Delete an enquiry. Only while status is `Open`. |
-| `POST` | `/enquiries/<enquiry_id>/assign` | **Admin** | Assign an enquiry to an HQ Trainee. |
-| `POST` | `/enquiries/<enquiry_id>/reassign` | **Admin** | Reassign to a different handler. |
-| `POST` | `/enquiries/<enquiry_id>/start` | **Admin**, **HQ Trainee** | Mark as in progress. HQ Trainees must be the assignee. |
-| `POST` | `/enquiries/<enquiry_id>/resolve` | **Admin**, **HQ Trainee** | Mark as resolved. HQ Trainees must be the assignee. |
-| `POST` | `/enquiries/<enquiry_id>/not-resolved` | **Admin**, **HQ Trainee** | Mark as not resolved, with a reason. HQ Trainees must be the assignee. |
-| `POST` | `/enquiries/<enquiry_id>/close` | **Admin** | Close an enquiry. |
-| `POST` | `/enquiries/<enquiry_id>/reopen` | **Admin** | Reopen a closed enquiry. |
-| `GET`, `POST` | `/enquiries/track` | 🌐 **Public** | Public status tracker — a student submits a `tracking_number` and sees the status. No login. |
+| | Route | Who | What happens |
+| --- | --- | :---: | --- |
+| `GET` | `/announcements/manage` | 🗂️👑 | Manage them. |
+| `POST` | `/announcements/create` | 🗂️👑 | Title, message, expiry date, optional poster image. |
+| `GET` | `/announcements/poster/<filename>` | 🌐 | Serves the image — public, since the landing page is. |
 
-**Enquiry fields:** `student_name`, `student_number`, `category`, `description`,
-`escalation_reason`, `lab_id`.
+Announcements vanish from the landing page once `expiry_date` passes. Nobody has to tidy up.
 
-**Workflow.** `Open → Assigned → In Progress → Resolved / Not Resolved → Closed`, with a
-timestamp captured at each transition (`escalated_at`, `assigned_at`, `in_progress_at`,
-`resolved_at`, `closed_at`).
+> Note this is **HQ Trainee *and* Admin**, not Admin only.
 
 ---
 
-## Announcements (`/announcements`)
+## Reports
 
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/announcements/manage` | **Admin**, **HQ Trainee** | Manage announcements. |
-| `POST` | `/announcements/create` | **Admin**, **HQ Trainee** | Create an announcement with an expiry date and optional poster image. |
-| `GET` | `/announcements/poster/<filename>` | 🌐 Public | Serve an uploaded poster image. |
+| | Route | Who | What happens |
+| --- | --- | :---: | --- |
+| `GET` | `/reports/` | 🗂️👑 | The export page. |
+| `GET` | `/reports/export/<report_type>` | 🗂️👑 | Builds the Excel file and downloads it. |
 
-Announcements appear on the public landing page until their `expiry_date` passes.
+`report_type` is one of: `attendance`, `assets`, `visitors`, `programmes`, `labs`, `provinces`.
+Anything else errors.
 
----
+Narrow it with `province_id`, `lab_id`, `start_date`, `end_date`.
 
-## Reports (`/reports`)
+Every workbook has two sheets: **Raw Data** and **Summary**.
 
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/reports/` | **Admin**, **HQ Trainee** | Report export page. |
-| `GET` | `/reports/export/<report_type>` | **Admin**, **HQ Trainee** | Generate an Excel report. Returns `<report_type>_report.xlsx`. |
-
-**`report_type`:** `attendance`, `assets`, `visitors`, `programmes`, `labs`, `provinces`.
-Any other value returns an error.
-
-**Query parameters:** `province_id`, `lab_id`, `start_date`, `end_date`.
-
-Each workbook contains a **Raw Data** sheet and a **Summary** sheet.
+> **Reports vs the register exports.** `/reports/` is the cross-cutting one — pick a type, get
+> the whole network. `/<register>/export` is the "download what I'm looking at" one, with the
+> page's filters already applied. Different jobs.
 
 ---
 
-## Administration (`/admin`)
+## Administration
 
-All routes require **Admin**.
+All 👑 **Admin only**.
 
-| Method | Path | Description |
+| | Route | What happens |
 | --- | --- | --- |
-| `GET` | `/admin/` | Administration dashboard — users, labs and provinces. |
-| `POST` | `/admin/users` | Create a user. Returns a generated temporary password. **JSON** capable. |
-| `POST` | `/admin/users/<user_id>/update` | Update a user's details, role or assigned lab. |
-| `POST` | `/admin/users/<user_id>/delete` | Delete a user. |
-| `POST` | `/admin/users/<user_id>/reset-password` | Reset a password; returns a new temporary password. **JSON** capable. |
-| `POST` | `/admin/labs` | Create a lab, including geo-coordinates and clock-in radius. |
-| `POST` | `/admin/labs/<lab_id>/update` | Update a lab. |
-| `POST` | `/admin/labs/<lab_id>/delete` | Delete a lab. |
+| `GET` | `/admin/` | Users, labs and provinces in one console. |
+| `POST` | `/admin/users` | Create a user. **Returns a generated temporary password.** **JSON** |
+| `POST` | `/admin/users/<user_id>/update` | Change details, role or assigned lab. |
+| `POST` | `/admin/users/<user_id>/delete` | Remove them. |
+| `POST` | `/admin/users/<user_id>/reset-password` | New temporary password. **JSON** |
+| `POST` | `/admin/labs` | Create a lab — **including its geo-fence**. |
+| `POST` | `/admin/labs/<lab_id>/update` | Change it. |
+| `POST` | `/admin/labs/<lab_id>/delete` | Remove it. |
 | `POST` | `/admin/provinces` | Create a province. |
-| `POST` | `/admin/provinces/<province_id>/update` | Update a province. |
-| `POST` | `/admin/provinces/<province_id>/delete` | Delete a province. |
+| `POST` | `/admin/provinces/<province_id>/update` | Change it. |
+| `POST` | `/admin/provinces/<province_id>/delete` | Remove it. |
 
-**User fields:** `full_name`, `staff_number`, `email`, `role`, `assigned_lab_id`, `active`.
-**Lab fields:** `name`, `province_id`, `latitude`, `longitude`, `radius_meters`.
+**User fields:** `full_name`, `staff_number`, `email`, `role`, `assigned_lab_id`, `active`
+**Lab fields:** `name`, `province_id`, `latitude`, `longitude`, `radius_meters`
 
----
-
-## Audit (`/audit`)
-
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/audit/` | **Admin** | Audit log of create/update/delete activity. Filterable by date. |
-
-Each entry records the actor, their role, the action, the entity type and label, and a
-SAST timestamp.
+> `latitude`, `longitude` and `radius_meters` are the geo-fence. Get them wrong and the lab's
+> trainees cannot log in at all.
 
 ---
 
-## JSON endpoints
+## Audit
 
-Routes marked **JSON** accept `Content-Type: application/json` and return JSON instead of a
-redirect, so the UI can update without a full page reload.
+| | Route | Who | What happens |
+| --- | --- | :---: | --- |
+| `GET` | `/audit/` | 👑 | Who created, changed or deleted what. Filterable by date. |
 
-### Request
+---
+
+## Talking JSON
+
+A few routes answer JSON when you ask in JSON. This is how the "Add" modals save without a page
+reload — it is not a general-purpose API.
+
+**Ask like this:**
 
 ```http
 POST /programmes/create
 Content-Type: application/json
 X-CSRFToken: <token>
 ```
-
 ```json
 {
   "title": "Career Expo",
-  "objective": "Expose students to career opportunities",
-  "target_audience": "Final year students",
-  "attendance_count": "42",
-  "activities_done": "Talks and CV workshops",
   "date": "2026-06-12",
   "start_time": "09:00",
   "end_time": "12:00",
@@ -263,31 +286,33 @@ X-CSRFToken: <token>
 }
 ```
 
-> Multi-value fields such as `facilitators` are sent as an **array**.
+> **Multi-value fields come as an array.** `facilitators` is the only one today. It is worth
+> knowing that this was a real bug once: the client used to flatten multi-selects and quietly
+> send only the last value, so a programme with three facilitators saved with one.
 
-### Success
+**It worked:**
 
 ```json
 {
   "success": true,
   "message": "Programme logged successfully.",
-  "row_html": "<tr data-id=\"5\" ...>...</tr>",
+  "row_html": "<tr data-id=\"5\" ...>…</tr>",
   "reload": false,
   "reset": true
 }
 ```
 
-| Field | Meaning |
+| Field | What the client does with it |
 | --- | --- |
-| `success` | Whether the operation succeeded. |
-| `message` | Text shown to the user as a toast. |
-| `row_html` | Rendered table row, inserted into the page without a reload. |
-| `reload` | Whether the client should reload the page. |
-| `reset` | Whether the form should be cleared. |
-| `redirect` | Where to navigate next, when present. |
-| `temporary_password` | Returned by the admin user-create and password-reset routes. |
+| `success` | Decides toast colour. |
+| `message` | Shown as the toast. |
+| `row_html` | A rendered table row, dropped straight into the page. No reload. |
+| `reload` | Reload the page instead, if true. |
+| `reset` | Clear the form. |
+| `redirect` | Navigate here, when present. |
+| `temporary_password` | Admin user-create and password-reset only — shown in a modal so it can be copied. |
 
-### Failure
+**It didn't:**
 
 ```json
 {
@@ -296,12 +321,84 @@ X-CSRFToken: <token>
 }
 ```
 
-Returned with **400 Bad Request**.
+…with a **400**.
 
 ---
 
-## Related documentation
+## The whole list
 
-- [Permissions matrix](permissions-matrix.md) — roles and their permissions.
-- [ERD](erd.md) — database schema.
-- [Project README](../README.md) — setup and deployment.
+53 routes, if you want to scan them at a glance.
+
+<details>
+<summary><b>Every route</b></summary>
+
+```
+GET       /                                          🌐
+GET,POST  /login                                     🌐
+GET       /logout                                    🔒
+GET,POST  /reset-password                            🔒
+GET       /dashboard/                                🔒
+
+GET       /attendance/                               🔒
+POST      /attendance/clock-in                       🔒
+POST      /attendance/clock-out                      🔒
+GET       /attendance/export-timesheet               🔒
+
+GET       /assets/                                   🔸
+POST      /assets/create                             🔸  JSON
+POST      /assets/<asset_id>/update                  🔸
+POST      /assets/<asset_id>/delete                  🔸
+GET       /assets/export                             🗂️👑
+
+GET       /visitors/                                 🔸
+POST      /visitors/create                           🔸  JSON
+POST      /visitors/<visitor_id>/update              🔸
+POST      /visitors/<visitor_id>/delete              🔸
+GET       /visitors/export                           🗂️👑
+
+GET       /programmes/                               🔸
+POST      /programmes/create                         🔸  JSON
+POST      /programmes/<programme_id>/update          🔸
+POST      /programmes/<programme_id>/delete          🔸
+GET       /programmes/export                         🗂️👑
+
+GET       /enquiries/                                🔸
+POST      /enquiries/create                          🔧  JSON
+POST      /enquiries/<enquiry_id>/edit               🔧
+POST      /enquiries/<enquiry_id>/delete             🔧
+POST      /enquiries/<enquiry_id>/assign             👑
+POST      /enquiries/<enquiry_id>/reassign           👑
+POST      /enquiries/<enquiry_id>/start              🗂️👑
+POST      /enquiries/<enquiry_id>/resolve            🗂️👑
+POST      /enquiries/<enquiry_id>/not-resolved       🗂️👑
+POST      /enquiries/<enquiry_id>/close              👑
+POST      /enquiries/<enquiry_id>/reopen             👑
+GET,POST  /enquiries/track                           🌐
+
+GET       /announcements/manage                      🗂️👑
+POST      /announcements/create                      🗂️👑
+GET       /announcements/poster/<filename>           🌐
+
+GET       /reports/                                  🗂️👑
+GET       /reports/export/<report_type>              🗂️👑
+
+GET       /admin/                                    👑
+POST      /admin/users                               👑  JSON
+POST      /admin/users/<user_id>/update              👑
+POST      /admin/users/<user_id>/delete              👑
+POST      /admin/users/<user_id>/reset-password      👑  JSON
+POST      /admin/labs                                👑
+POST      /admin/labs/<lab_id>/update                👑
+POST      /admin/labs/<lab_id>/delete                👑
+POST      /admin/provinces                           👑
+POST      /admin/provinces/<province_id>/update      👑
+POST      /admin/provinces/<province_id>/delete      👑
+
+GET       /audit/                                    👑
+```
+
+</details>
+
+---
+
+→ [Permissions matrix](permissions-matrix.md) · [ERD](erd.md) · [README](../README.md)
