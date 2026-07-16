@@ -68,19 +68,23 @@ OPELSS has three authenticated roles plus unauthenticated public access.
 
 | Function | Lab Trainee | HQ Trainee | Admin | Public |
 | --- | :---: | :---: | :---: | :---: |
-| Clock in / out (geolocation) | ✅ own lab | — | — | — |
-| View attendance records | ✅ own | ✅ all | ✅ all | — |
+| Clock in / out (geolocation) | ✅ own lab | ⚠️ any user with an assigned lab | ⚠️ any user with an assigned lab | — |
+| Export own timesheet (PDF) | ✅ | ✅ | ✅ | — |
 | Assets — add / edit / delete | ✅ own lab | ✅ all | ✅ all | — |
 | Visitors — log / edit / delete | ✅ own lab | ✅ all | ✅ all | — |
 | Programmes — log / edit / delete | ✅ own lab | ✅ all | ✅ all | — |
 | Excel export (assets/visitors/programmes) | — | ✅ | ✅ | — |
 | Enquiries — raise / escalate | ✅ | — | — | — |
-| Enquiries — manage / assign / resolve | — | ✅ | ✅ | — |
+| Enquiries — work (start / resolve) | — | ✅ assigned to them | ✅ any | — |
+| Enquiries — assign / close / reopen | — | — | ✅ | — |
 | Track an enquiry by reference number | — | — | — | ✅ |
 | Reports — generate exports | — | ✅ | ✅ | — |
-| Announcements — create / manage | — | — | ✅ | 👁 view |
+| Announcements — create / manage | — | ✅ | ✅ | 👁 view |
 | Users, labs, provinces — administer | — | — | ✅ | — |
 | Audit log | — | — | ✅ | — |
+
+> ⚠️ Attendance routes are guarded by login only — no role check. Having an `assigned_lab` is
+> what gates them in practice. See [docs/permissions-matrix.md](docs/permissions-matrix.md).
 
 > A precise, route-by-route breakdown is in [docs/permissions-matrix.md](docs/permissions-matrix.md).
 
