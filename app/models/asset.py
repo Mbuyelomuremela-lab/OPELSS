@@ -9,6 +9,7 @@ class Asset(db.Model):
     category = db.Column(db.String(100), nullable=False)
     serial_number = db.Column(db.String(120), unique=True, nullable=False)
     status = db.Column(db.String(50), nullable=False, default="Working Fine")
+    fault_description = db.Column(db.Text, nullable=True)
     lab_id = db.Column(db.Integer, db.ForeignKey("labs.id"), nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 

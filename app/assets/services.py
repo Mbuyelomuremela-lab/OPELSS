@@ -20,7 +20,7 @@ def export_assets_excel(province_id=None, lab_id=None, category=None, status=Non
     workbook = Workbook()
     raw = workbook.active
     raw.title = "Assets"
-    headers = ["Asset Description", "Category", "Unisa Tag Number", "Status", "Lab", "Province"]
+    headers = ["Asset Name", "Category", "Unisa Tag Number", "Status", "Fault Description", "Lab", "Province"]
     raw.append(headers)
 
     for asset in assets:
@@ -29,6 +29,7 @@ def export_assets_excel(province_id=None, lab_id=None, category=None, status=Non
             asset.category,
             asset.serial_number,
             asset.status,
+            asset.fault_description or "",
             asset.lab.name if asset.lab else "",
             asset.lab.province.name if asset.lab and asset.lab.province else "",
         ])

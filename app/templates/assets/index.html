@@ -64,10 +64,11 @@ header_title %}Asset Management{% endblock %} {% block content %}
         <table class="table table-hover align-middle selectable-table" id="assetsTable">
           <thead>
             <tr>
-              <th>Asset Description</th>
+              <th>Asset Name</th>
               <th>Category</th>
               <th>Unisa Tag Number</th>
               <th>Status</th>
+              <th>Fault Description</th>
               <th>Lab</th>
             </tr>
           </thead>
@@ -79,17 +80,19 @@ header_title %}Asset Management{% endblock %} {% block content %}
               data-category="{{ asset.category }}"
               data-serial-number="{{ asset.serial_number }}"
               data-status="{{ asset.status }}"
+              data-fault-description="{{ asset.fault_description or '' }}"
               data-lab-id="{{ asset.lab_id }}"
             >
               <td>{{ asset.asset_name }}</td>
               <td>{{ asset.category }}</td>
               <td>{{ asset.serial_number }}</td>
               <td><span class="badge bg-success">{{ asset.status }}</span></td>
+              <td>{{ asset.fault_description or "" }}</td>
               <td>{{ asset.lab.name }}</td>
             </tr>
             {% else %}
             <tr>
-              <td colspan="5" class="text-center text-muted">
+              <td colspan="6" class="text-center text-muted">
                 No assets found.
               </td>
             </tr>
@@ -111,7 +114,8 @@ header_title %}Asset Management{% endblock %} {% block content %}
         <div class="mb-3">{{ form.asset_name.label(class_='form-label') }}{{ form.asset_name(class_='form-control') }}</div>
         <div class="mb-3">{{ form.category.label(class_='form-label') }}{{ form.category(class_='form-select') }}</div>
         <div class="mb-3">{{ form.serial_number.label(class_='form-label') }}{{ form.serial_number(class_='form-control') }}</div>
-        <div class="mb-3">{{ form.status.label(class_='form-label') }}{{ form.status(class_='form-select') }}</div>
+        <div class="mb-3">{{ form.status.label(class_='form-label') }}{{ form.status(class_='form-select', id='assetAddStatus') }}</div>
+        <div class="mb-3 asset-fault-group" id="assetAddFaultGroup" hidden>{{ form.fault_description.label(class_='form-label') }}{{ form.fault_description(class_='form-control', rows='3', id='assetAddFault', placeholder='e.g. Laptop shows a blue screen and will not switch on') }}</div>
         <div class="mb-3">{{ form.lab_id.label(class_='form-label') }}{{ form.lab_id(class_='form-select') }}</div>
       </div>
       <div class="modal-footer">{{ form.submit(class_='btn btn-success') }}</div>
@@ -125,17 +129,30 @@ header_title %}Asset Management{% endblock %} {% block content %}
       <div class="modal-header"><h5 class="modal-title">Edit Asset</h5><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="mb-3"><label class="form-label" for="assetEditName">Asset Description</label>{{ form.asset_name(class_='form-control', id='assetEditName') }}</div>
+        <div class="mb-3"><label class="form-label" for="assetEditName">Asset Name</label>{{ form.asset_name(class_='form-control', id='assetEditName') }}</div>
         <div class="mb-3"><label class="form-label" for="assetEditCategory">Category</label>{{ form.category(class_='form-control', id='assetEditCategory') }}</div>
         <div class="mb-3"><label class="form-label" for="assetEditSerial">Unisa Tag Number</label>{{ form.serial_number(class_='form-control', id='assetEditSerial') }}</div>
         <div class="mb-3"><label class="form-label" for="assetEditStatus">Status</label>{{ form.status(class_='form-select', id='assetEditStatus') }}</div>
+        <div class="mb-3 asset-fault-group" id="assetEditFaultGroup" hidden><label class="form-label" for="assetEditFault">Fault Description</label>{{ form.fault_description(class_='form-control', rows='3', id='assetEditFault', placeholder='e.g. Laptop shows a blue screen and will not switch on') }}</div>
         <div class="mb-3"><label class="form-label" for="assetEditLab">Lab</label>{{ form.lab_id(class_='form-select', id='assetEditLab') }}</div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Save</button></div>
     </form>
   </div></div>
 </div>
-<form id="assetDeleteForm" method="post" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /></form>
+<div class="modal fade" id="assetDeleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Delete Asset</h5><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">Are you sure you want to delete <strong id="assetDeleteName"></strong>? This action cannot be undone.</div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+      <form id="assetDeleteForm" method="post" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button class="btn btn-danger" type="submit">Delete</button>
+      </form>
+    </div>
+  </div></div>
+</div>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
@@ -144,6 +161,35 @@ header_title %}Asset Management{% endblock %} {% block content %}
     const editBtn = document.getElementById("assetEditBtn");
     const deleteBtn = document.getElementById("assetDeleteBtn");
     let selected = null;
+
+    // Statuses that describe a problem — the fault box is shown for these,
+    // and made mandatory for "Urgent Repair" (mirrors the server-side rule).
+    const PROBLEM_STATUSES = ["Slow", "Urgent Repair", "Missing/Stolen"];
+    const REQUIRED_STATUSES = ["Urgent Repair"];
+
+    const toggleFault = (statusSelect, group, field) => {
+      if (!statusSelect || !group || !field) return;
+      const status = statusSelect.value;
+      const show = PROBLEM_STATUSES.includes(status);
+      group.hidden = !show;
+      const required = REQUIRED_STATUSES.includes(status);
+      field.required = required;
+      if (!show) field.value = "";
+    };
+
+    const addStatus = document.getElementById("assetAddStatus");
+    const addFaultGroup = document.getElementById("assetAddFaultGroup");
+    const addFault = document.getElementById("assetAddFault");
+    addStatus?.addEventListener("change", () => toggleFault(addStatus, addFaultGroup, addFault));
+    // After an AJAX save the form is reset to "Working Fine" — re-hide the box to match.
+    document.getElementById("assetAddForm")?.addEventListener("reset", () => {
+      setTimeout(() => toggleFault(addStatus, addFaultGroup, addFault), 0);
+    });
+
+    const editStatus = document.getElementById("assetEditStatus");
+    const editFaultGroup = document.getElementById("assetEditFaultGroup");
+    const editFault = document.getElementById("assetEditFault");
+    editStatus?.addEventListener("change", () => toggleFault(editStatus, editFaultGroup, editFault));
     table?.addEventListener("click", (event) => {
       const row = event.target.closest("tr[data-id]");
       if (!row || !table.contains(row)) return;
@@ -154,6 +200,7 @@ header_title %}Asset Management{% endblock %} {% block content %}
       deleteBtn.disabled = false;
     });
     addBtn?.addEventListener("click", () => {
+      toggleFault(addStatus, addFaultGroup, addFault);
       new bootstrap.Modal(document.getElementById("assetAddModal")).show();
     });
 
@@ -163,15 +210,17 @@ header_title %}Asset Management{% endblock %} {% block content %}
       document.getElementById("assetEditCategory").value = selected.dataset.category;
       document.getElementById("assetEditSerial").value = selected.dataset.serialNumber;
       document.getElementById("assetEditStatus").value = selected.dataset.status;
+      editFault.value = selected.dataset.faultDescription || "";
+      toggleFault(editStatus, editFaultGroup, editFault);
       document.getElementById("assetEditLab").value = selected.dataset.labId;
       document.getElementById("assetEditForm").action = `/assets/${selected.dataset.id}/update`;
       new bootstrap.Modal(document.getElementById("assetEditModal")).show();
     });
     deleteBtn?.addEventListener("click", () => {
-      if (!selected || !confirm(`Delete asset "${selected.dataset.assetName}"?`)) return;
-      const form = document.getElementById("assetDeleteForm");
-      form.action = `/assets/${selected.dataset.id}/delete`;
-      form.submit();
+      if (!selected) return;
+      document.getElementById("assetDeleteName").textContent = selected.dataset.assetName;
+      document.getElementById("assetDeleteForm").action = `/assets/${selected.dataset.id}/delete`;
+      new bootstrap.Modal(document.getElementById("assetDeleteModal")).show();
     });
   });
 </script>
