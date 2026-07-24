@@ -1,7 +1,7 @@
 """add asset fault description
 
 Revision ID: a1c7e4f0b2d9
-Revises: e1a2b3c4d5e6
+Revises: f4a7b1c9e2d3
 Create Date: 2026-07-24 00:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 
 revision: str = 'a1c7e4f0b2d9'
-down_revision: Union[str, Sequence[str], None] = 'e1a2b3c4d5e6'
+down_revision: Union[str, Sequence[str], None] = 'f4a7b1c9e2d3'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
