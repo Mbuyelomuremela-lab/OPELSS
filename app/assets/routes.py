@@ -1,13 +1,21 @@
 from flask import render_template, redirect, url_for, flash, request, send_file, abort, jsonify
 from flask_login import login_required, current_user
+from markupsafe import escape
 from app.assets import assets_bp
-from app.assets.forms import AssetForm
+from app.assets.forms import AssetForm, PROBLEM_STATUSES
 from app.assets.services import export_assets_excel
 from app.audit.services import log_activity
 from app.extensions import db
 from app.models.asset import Asset
 from app.models.lab import Lab
 from app.models.province import Province
+
+
+def _normalized_fault(form):
+    """Keep the fault note only for problem statuses; blank it for 'Working Fine'."""
+    if form.status.data in PROBLEM_STATUSES:
+        return (form.fault_description.data or "").strip() or None
+    return None
 
 
 @assets_bp.route("/")
@@ -72,6 +80,7 @@ def create_asset():
             category=form.category.data,
             serial_number=form.serial_number.data,
             status=form.status.data,
+            fault_description=_normalized_fault(form),
             lab_id=form.lab_id.data,
             created_by=current_user.id,
         )
@@ -81,11 +90,12 @@ def create_asset():
         if request.is_json:
             row_html = f"""
             <tr>
-              <td>{asset.asset_name}</td>
-              <td>{asset.category}</td>
-              <td>{asset.serial_number}</td>
-              <td><span class=\"badge bg-success\">{asset.status}</span></td>
-              <td>{asset.lab.name}</td>
+              <td>{escape(asset.asset_name)}</td>
+              <td>{escape(asset.category)}</td>
+              <td>{escape(asset.serial_number)}</td>
+              <td><span class=\"badge bg-success\">{escape(asset.status)}</span></td>
+              <td>{escape(asset.fault_description or "")}</td>
+              <td>{escape(asset.lab.name)}</td>
             </tr>
             """
             return jsonify(success=True, message="Asset saved successfully.", row_html=row_html, reload=False, reset=True)
@@ -133,6 +143,7 @@ def update_asset(asset_id):
         asset.category = form.category.data
         asset.serial_number = form.serial_number.data
         asset.status = form.status.data
+        asset.fault_description = _normalized_fault(form)
         asset.lab_id = form.lab_id.data
         db.session.commit()
         log_activity("updated", "asset", asset.asset_name, asset.id)
