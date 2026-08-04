@@ -1,4 +1,5 @@
 import calendar
+from datetime import date
 
 from flask import render_template, redirect, url_for, flash, request, send_file
 from flask_login import login_required, current_user
@@ -21,9 +22,24 @@ def overview():
     clock_in_form = ClockInForm()
     clock_out_form = ClockOutForm()
     today = sast_today()
-    logs = AttendanceLog.query.filter_by(user_id=current_user.id).order_by(AttendanceLog.date.desc()).limit(15).all()
 
-    # Last 12 months (most recent first) for the timesheet export picker.
+    # Selected month/year drives both the table and the export. Default: current month.
+    month = request.args.get("month", type=int) or today.month
+    year = request.args.get("year", type=int) or today.year
+    if not 1 <= month <= 12:
+        month, year = today.month, today.year
+
+    # Show only the selected month's records (half-open range works for Date or DateTime).
+    period_start = date(year, month, 1)
+    period_end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+    logs = (
+        AttendanceLog.query.filter_by(user_id=current_user.id)
+        .filter(AttendanceLog.date >= period_start, AttendanceLog.date < period_end)
+        .order_by(AttendanceLog.date.desc())
+        .all()
+    )
+
+    # Last 12 months (most recent first) for the month picker.
     periods = []
     m, y = today.month, today.year
     for _ in range(12):
@@ -40,6 +56,9 @@ def overview():
         assigned_lab=current_user.assigned_lab,
         today=today,
         periods=periods,
+        selected_month=month,
+        selected_year=year,
+        period_label=f"{calendar.month_name[month]} {year}",
     )
 
 
