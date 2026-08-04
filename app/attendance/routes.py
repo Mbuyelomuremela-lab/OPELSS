@@ -1,3 +1,5 @@
+import calendar
+
 from flask import render_template, redirect, url_for, flash, request, send_file
 from flask_login import login_required, current_user
 from app.attendance import attendance_bp
@@ -21,6 +23,15 @@ def overview():
     today = sast_today()
     logs = AttendanceLog.query.filter_by(user_id=current_user.id).order_by(AttendanceLog.date.desc()).limit(15).all()
 
+    # Last 12 months (most recent first) for the timesheet export picker.
+    periods = []
+    m, y = today.month, today.year
+    for _ in range(12):
+        periods.append({"month": m, "year": y, "label": f"{calendar.month_name[m]} {y}"})
+        m -= 1
+        if m == 0:
+            m, y = 12, y - 1
+
     return render_template(
         "attendance/overview.html",
         clock_in_form=clock_in_form,
@@ -28,6 +39,7 @@ def overview():
         logs=logs,
         assigned_lab=current_user.assigned_lab,
         today=today,
+        periods=periods,
     )
 
 
