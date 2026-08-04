@@ -6,6 +6,7 @@ from .services import authenticate_user, reset_password
 from app.models.announcement import Announcement
 from app.models.province import Province
 from app.utils import sast_today
+from app.tippytube import pick_featured
 from sqlalchemy.orm import joinedload
 
 
@@ -13,8 +14,13 @@ from sqlalchemy.orm import joinedload
 def landing():
     announcements = Announcement.query.filter(Announcement.expiry_date >= sast_today()).order_by(Announcement.created_at.desc()).all()
     provinces = Province.query.options(joinedload(Province.labs)).order_by(Province.name).all()
-    form = LoginForm()
-    return render_template("landing.html", announcements=announcements, provinces=provinces)
+    videos = pick_featured(6)
+    return render_template(
+        "landing.html",
+        announcements=announcements,
+        provinces=provinces,
+        videos=videos,
+    )
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
