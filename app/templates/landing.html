@@ -3,6 +3,8 @@ not_on_landing_page = False %} {% block title %}Landing – OPELSS{% endblock %}
 {% if not_on_landing_page == False %}{% block login_button %}
 
 <a href="#about_us" class="link-dark text-decoration-none me-4">About Us</a>
+<a href="#our_labs" class="link-dark text-decoration-none me-4">Our Labs</a>
+<a href="#tippytube" class="link-dark text-decoration-none me-4">Videos</a>
 <a href="#announcementCarousel" class="link-dark text-decoration-none me-4"
   >Announcements</a
 >
@@ -11,25 +13,124 @@ not_on_landing_page = False %} {% block title %}Landing – OPELSS{% endblock %}
   >Staff Login</a
 >
 {% endblock %} {% endif %} {% set on_landing_page = True %} {% block content %}
-<div class="container mt-5">
-  <div class="row gy-4 align-items-center">
-    <div class="col-lg-6">
-      <h1 class="display-5 text-dark">UNISA: College of Education</h1>
-      <p class="lead text-muted">
-        <img
-          src="../static/images/logo.png"
-          alt="oau logo"
-          class="me-2"
-          style="height: 40px; width: auto"
-        />
-        ODEL Acceleration Unit - e-learning lab support
-      </p>
-      <div class="mt-4 d-flex gap-2 flex-wrap">
-        <a
-          href="{{ url_for('enquiries.track') }}"
-          class="btn btn-success btn-lg"
-          >Track Enquiry</a
+<style>
+  .hero-band {
+    background: linear-gradient(135deg, #eef2f7 0%, #e7f0ea 100%);
+    border-radius: 1.5rem;
+  }
+  .hero-visual {
+    background: linear-gradient(135deg, #1b3a6b 0%, #2e7d5b 100%);
+    color: #fff;
+    border-radius: 1.25rem;
+  }
+  .hero-stat {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 0.9rem;
+  }
+  .lab-card,
+  .video-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .lab-card:hover,
+  .video-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.12) !important;
+  }
+  .video-thumb {
+    position: relative;
+    overflow: hidden;
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
+  }
+  .video-thumb img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+  .video-thumb .play-badge {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.28);
+    color: #fff;
+    font-size: 2.75rem;
+    opacity: 0.9;
+  }
+  .section-heading::after {
+    content: "";
+    display: block;
+    width: 3rem;
+    height: 4px;
+    background: #2e7d5b;
+    border-radius: 2px;
+    margin-top: 0.5rem;
+  }
+</style>
+<div class="container mt-4">
+  <div class="hero-band p-4 p-lg-5">
+    <div class="row gy-4 align-items-center">
+      <div class="col-lg-7">
+        <span class="badge bg-success-subtle text-success-emphasis mb-3"
+          >ODEL Acceleration Unit</span
         >
+        <h1 class="display-5 fw-bold text-dark">
+          UNISA: College of Education
+        </h1>
+        <p class="lead text-muted">
+          <img
+            src="../static/images/logo.png"
+            alt="oau logo"
+            class="me-2"
+            style="height: 40px; width: auto"
+          />
+          e-Learning lab support — bridging the digital divide for teacher
+          development across South Africa.
+        </p>
+        <div class="mt-4 d-flex gap-2 flex-wrap">
+          <a
+            href="{{ url_for('enquiries.track') }}"
+            class="btn btn-success btn-lg"
+            ><i class="fas fa-magnifying-glass me-2"></i>Track Enquiry</a
+          >
+          <a href="#tippytube" class="btn btn-outline-danger btn-lg"
+            ><i class="fab fa-youtube me-2"></i>Watch on Tippy Tube</a
+          >
+          <a
+            href="{{ url_for('auth.login') }}"
+            class="btn btn-outline-dark btn-lg"
+            ><i class="fas fa-right-to-bracket me-2"></i>Staff Login</a
+          >
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="hero-visual p-4 p-lg-5 text-center shadow">
+          <img
+            src="../static/images/logo.png"
+            alt="OAU logo"
+            style="height: 72px; width: auto"
+            class="mb-3"
+          />
+          <h4 class="fw-bold mb-1">e-Learning Labs @ Teacher Centres</h4>
+          <p class="small mb-4 opacity-75">Powered by the OAU-PID unit</p>
+          <div class="row g-3">
+            <div class="col-6">
+              <div class="hero-stat p-3">
+                <div class="h3 fw-bold mb-0">{{ provinces | length }}</div>
+                <div class="small opacity-75">Provinces</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="hero-stat p-3">
+                <div class="h3 fw-bold mb-0">
+                  {{ provinces | map(attribute='labs') | map('length') | sum }}
+                </div>
+                <div class="small opacity-75">e-Learning Labs</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -94,6 +195,92 @@ not_on_landing_page = False %} {% block title %}Landing – OPELSS{% endblock %}
       </button>
     </div>
   </div>
+
+  <section id="our_labs" class="mt-5">
+    <h2 class="section-heading">Our Labs</h2>
+    <p class="text-muted">Find our e-Learning Labs across the country.</p>
+    <div class="row g-4">
+      {% for province in provinces %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card lab-card rounded-4 shadow-sm h-100">
+          <div class="card-body">
+            <h5 class="card-title d-flex align-items-center">
+              <i class="fas fa-location-dot text-success me-2"></i
+              >{{ province.name }}
+            </h5>
+            <ul class="list-unstyled mb-0">
+              {% for lab in province.labs %}
+              <li
+                class="d-flex justify-content-between align-items-center py-2 border-bottom"
+              >
+                <span
+                  ><i class="fas fa-desktop text-secondary me-2"></i
+                  >{{ lab.name }}</span
+                >
+                {% if lab.latitude and lab.longitude %}
+                <a
+                  href="https://www.google.com/maps?q={{ lab.latitude }},{{ lab.longitude }}"
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn-sm btn-outline-success"
+                  ><i class="fas fa-diamond-turn-right me-1"></i>Directions</a
+                >
+                {% endif %}
+              </li>
+              {% else %}
+              <li class="text-muted small">No labs listed yet.</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="col-12">
+        <p class="text-muted">No labs to display yet.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section id="tippytube" class="mt-5">
+    <div
+      class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-2"
+    >
+      <div>
+        <h2 class="section-heading mb-0">Watch on Tippy Tube</h2>
+        <p class="text-muted mb-0 mt-2">
+          Micro-teaching lessons and module videos from our team.
+        </p>
+      </div>
+      <a
+        href="https://youtube.com/@tippytube2340"
+        target="_blank"
+        rel="noopener"
+        class="btn btn-danger"
+        ><i class="fab fa-youtube me-2"></i>Visit the channel</a
+      >
+    </div>
+    <div class="row g-4">
+      {% for video in videos %}
+      <div class="col-md-6 col-lg-4">
+        <a
+          href="{{ video.url }}"
+          target="_blank"
+          rel="noopener"
+          class="card video-card rounded-4 shadow-sm h-100 text-decoration-none text-dark"
+        >
+          <div class="video-thumb">
+            <img src="{{ video.thumbnail }}" alt="{{ video.title }}" loading="lazy" />
+            <span class="play-badge"><i class="fas fa-circle-play"></i></span>
+          </div>
+          <div class="card-body">
+            <h6 class="card-title mb-0">{{ video.title }}</h6>
+          </div>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
 
   <div id="about_us" class="row mt-5 gy-4">
     <div class="col-12">
