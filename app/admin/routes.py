@@ -19,6 +19,7 @@ from app.models.province import Province
 from app.models.lab import Lab
 from app.models.user import User
 from app.utils import role_required
+from app.permissions import ALL_ROLES
 
 def _sorted_labs():
     return (
@@ -30,7 +31,7 @@ def _sorted_labs():
 
 @admin_bp.route("/")
 @login_required
-@role_required("Admin")
+@role_required("Developers")
 def index():
     provinces = Province.query.order_by(Province.name).all()
     # Sort labs: group by province (alphabetical), then lab name alphabetical within each province
@@ -54,7 +55,7 @@ def index():
 
 @admin_bp.route("/provinces", methods=["POST"])
 @login_required
-@role_required("Admin")
+@role_required("Developers")
 def add_province():
     form = ProvinceForm()
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
@@ -76,7 +77,7 @@ def add_province():
 
 @admin_bp.route("/labs", methods=["POST"])
 @login_required
-@role_required("Admin")
+@role_required("Developers")
 def add_lab():
     form = LabForm()
     form.province_id.choices = [(p.id, p.name) for p in Province.query.order_by(Province.name).all()]
@@ -106,7 +107,7 @@ def add_lab():
 
 @admin_bp.route("/users", methods=["POST"])
 @login_required
-@role_required("Admin")
+@role_required("Developers")
 def add_user():
     form = UserForm()
     form.assigned_lab_id.choices = [(0, "Unassigned")] + [
@@ -159,7 +160,7 @@ def add_user():
 
 @admin_bp.route("/provinces/<int:province_id>/update", methods=["POST"])
 @login_required
-@role_required("Admin")
+@role_required("Developers")
 def edit_province(province_id):
     province = Province.query.get_or_404(province_id)
     name = (request.form.get("name") or "").strip()
@@ -179,7 +180,7 @@ def edit_province(province_id):
 
 @admin_bp.route("/provinces/<int:province_id>/delete", methods=["POST"])
 @login_required
-@role_required("Admin")
+@role_required("Developers")
 def remove_province(province_id):
     province = Province.query.get_or_404(province_id)
     if province.labs:
@@ -192,7 +193,7 @@ def remove_province(province_id):
 
 @admin_bp.route("/labs/<int:lab_id>/update", methods=["POST"])
 @login_required
-@role_required("Admin")
+@role_required("Developers")
 def edit_lab(lab_id):
     lab = Lab.query.get_or_404(lab_id)
     name = (request.form.get("name") or "").strip()
@@ -222,7 +223,7 @@ def edit_lab(lab_id):
 
 @admin_bp.route("/labs/<int:lab_id>/delete", methods=["POST"])
 @login_required
-@role_required("Admin")
+@role_required("Developers")
 def remove_lab(lab_id):
     lab = Lab.query.get_or_404(lab_id)
     if any([lab.users, lab.attendance_logs, lab.assets, lab.visitors, lab.enquiries, lab.programmes]):
@@ -237,7 +238,7 @@ def remove_lab(lab_id):
 
 @admin_bp.route("/users/<int:user_id>/update", methods=["POST"])
 @login_required
-@role_required("Admin")
+@role_required("Developers")
 def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     full_name = (request.form.get("full_name") or "").strip()
@@ -247,7 +248,7 @@ def edit_user(user_id):
     assigned_lab_id = request.form.get("assigned_lab_id", type=int) or None
     active = request.form.get("active") == "on"
 
-    if not full_name or not email or role not in ["Admin", "HQ Trainee", "Lab Trainee"]:
+    if not full_name or not email or role not in ALL_ROLES:
         flash("Invalid user details provided.", "danger")
         return redirect(url_for("admin.index"))
 
@@ -284,7 +285,7 @@ def edit_user(user_id):
 
 @admin_bp.route("/users/<int:user_id>/delete", methods=["POST"])
 @login_required
-@role_required("Admin")
+@role_required("Developers")
 def remove_user(user_id):
     from app.models.attendance import AttendanceAudit
     from app.models.enquiry import Enquiry
@@ -294,8 +295,8 @@ def remove_user(user_id):
 
     user = User.query.get_or_404(user_id)
 
-    if user.role == "Admin" and User.query.filter_by(role="Admin").count() <= 1:
-        flash("Cannot delete the last admin user.", "danger")
+    if user.role == "Developers" and User.query.filter_by(role="Developers").count() <= 1:
+        flash("Cannot delete the last developer user.", "danger")
         return redirect(url_for("admin.index"))
 
     has_records = (
@@ -321,7 +322,7 @@ def remove_user(user_id):
 
 @admin_bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
 @login_required
-@role_required("Admin")
+@role_required("Developers")
 def reset_password(user_id):
     user = User.query.get_or_404(user_id)
     password = reset_user_password(user)

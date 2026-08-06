@@ -1,6 +1,7 @@
 from datetime import datetime
 from flask import render_template, redirect, url_for, flash, request, send_file, abort, jsonify
 from flask_login import login_required, current_user
+from app.permissions import HQ_ROLES
 from app.visitors import visitors_bp
 from app.visitors.forms import VisitorForm
 from app.visitors.services import export_visitors_excel
@@ -121,7 +122,7 @@ def create_visitor():
 @visitors_bp.route("/export")
 @login_required
 def export():
-    if current_user.role not in ["Admin", "HQ Trainee"]:
+    if current_user.role not in HQ_ROLES:
         abort(403)
     province_id = request.args.get("province_id", type=int)
     lab_id = request.args.get("lab_id", type=int)

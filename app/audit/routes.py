@@ -4,7 +4,6 @@ from flask_login import login_required
 from app.audit import audit_bp
 from app.models.activity_log import ActivityLog
 from app.models.user import User
-from app.utils import role_required
 
 ACTIONS = ["created", "updated", "deleted"]
 ENTITY_TYPES = ["asset", "enquiry", "lab"]
@@ -21,7 +20,6 @@ def _parse_date(value):
 
 @audit_bp.route("/")
 @login_required
-@role_required("Admin")
 def index():
     action = request.args.get("action") or None
     entity_type = request.args.get("entity_type") or None

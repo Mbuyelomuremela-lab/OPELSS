@@ -9,7 +9,7 @@ header_title %}Visitor Logs{% endblock %} {% block content %}
           <button class="btn btn-outline-success" id="visitorAddBtn" type="button">Log Visitor</button>
           <button class="btn btn-outline-primary" id="visitorEditBtn" type="button" disabled>Edit</button>
           <button class="btn btn-outline-danger" id="visitorDeleteBtn" type="button" disabled>Delete</button>
-          {% if current_user.role in ['Admin', 'HQ Trainee'] %}
+          {% if is_hq_admin %}
           <a class="btn btn-primary" href="{{ url_for('visitors.export', **request.args) }}">Export to Excel</a>
           {% endif %}
         </div>
@@ -33,7 +33,7 @@ header_title %}Visitor Logs{% endblock %} {% block content %}
             <label class="form-label small">To</label>
             <input type="date" name="date_to" class="form-control" value="{{ selected_date_to }}" />
           </div>
-          {% if current_user.role in ['Admin', 'HQ Trainee'] %}
+          {% if is_hq_admin %}
           <div class="col-auto">
             <label class="form-label small">Lab</label>
             <select name="lab_id" class="form-select">

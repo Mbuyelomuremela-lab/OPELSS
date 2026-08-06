@@ -49,12 +49,18 @@ def create_app():
     for bp in blueprints:
         app.register_blueprint(bp)
 
+    # Enforce module access on every request (hidden tabs are also blocked URLs).
+    from app.permissions import register_access_guard, visible_tabs, HQ_ROLES, can_manage_enquiries
+    register_access_guard(app)
+
     @app.context_processor
     def inject_role_flags():
         role = current_user.role if getattr(current_user, "is_authenticated", False) else None
         return {
-            "is_hq_admin": role in ["Admin", "HQ Trainee"],
+            "is_hq_admin": role in HQ_ROLES,
             "is_trainee": role == "Lab Trainee",
+            "can_manage_enquiries": can_manage_enquiries(role),
+            "visible_tabs": visible_tabs(role),
         }
 
     with app.app_context():
@@ -150,7 +156,7 @@ def seed_data():
         admin = User(
             full_name="System Admin",
             email="admin@opelss.com",
-            role="Admin",
+            role="Developers",
             active=True,
             assigned_lab_id=lab.id if lab else None,
         )

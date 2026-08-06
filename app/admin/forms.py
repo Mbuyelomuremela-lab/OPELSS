@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, BooleanField, SubmitField, FloatField
 from wtforms.validators import DataRequired, Length, Email, Optional, Regexp
+from app.permissions import ROLE_CHOICES
 
 
 class ProvinceForm(FlaskForm):
@@ -24,7 +25,7 @@ class UserForm(FlaskForm):
         validators=[Optional(), Length(min=8, max=8), Regexp(r"^\d{8}$", message="Staff number must be exactly 8 digits.")],
     )
     email = StringField("Email", validators=[DataRequired(), Email(), Length(max=120)])
-    role = SelectField("Role", choices=[("Admin", "Admin"), ("HQ Trainee", "HQ Trainee"), ("Lab Trainee", "Lab Trainee")], validators=[DataRequired()])
+    role = SelectField("Role", choices=ROLE_CHOICES, validators=[DataRequired()])
     assigned_lab_id = SelectField("Assigned Lab", coerce=int, validators=[Optional()])
     active = BooleanField("Active", default=True)
     submit = SubmitField("Create User")

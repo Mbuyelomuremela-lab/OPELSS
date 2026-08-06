@@ -64,4 +64,5 @@ def lab_trainee_required(view):
 
 
 def hq_required(view):
-    return role_required("HQ Trainee", "Admin")(view)
+    from app.permissions import HQ_ROLES
+    return role_required(*HQ_ROLES)(view)

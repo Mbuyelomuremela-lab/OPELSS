@@ -58,17 +58,23 @@ Dashboard{% endblock %} {% block content %}
     <div class="card shadow-sm border-0 rounded-4 p-4 min-vh-100">
       <h5 class="mb-4">Quick actions</h5>
       <div class="d-grid gap-3">
+        {% if 'admin' in visible_tabs %}
         <a class="btn btn-primary btn-lg" href="{{ url_for('admin.index') }}"
           >Manage Labs &amp; Users</a
         >
+        {% endif %}
+        {% if 'reports' in visible_tabs %}
         <a class="btn btn-success btn-lg" href="{{ url_for('reports.index') }}"
           >Export Reports</a
         >
+        {% endif %}
+        {% if 'announcements' in visible_tabs %}
         <a
           class="btn btn-warning btn-lg text-white"
           href="{{ url_for('announcements.manage') }}"
           >Manage Announcements</a
         >
+        {% endif %}
       </div>
     </div>
   </div>

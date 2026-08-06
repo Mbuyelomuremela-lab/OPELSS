@@ -1,6 +1,7 @@
 from datetime import date
 from flask import render_template, request, send_file, abort
 from flask_login import login_required, current_user
+from app.permissions import HQ_ROLES
 from app.reports import reports_bp
 from app.reports.services import export_report_excel
 from app.models.lab import Lab
@@ -10,7 +11,7 @@ from app.models.province import Province
 @reports_bp.route("/")
 @login_required
 def index():
-    if current_user.role not in ["Admin", "HQ Trainee"]:
+    if current_user.role not in HQ_ROLES:
         abort(403)
 
     labs = Lab.query.order_by(Lab.name).all()
@@ -21,7 +22,7 @@ def index():
 @reports_bp.route("/export/<report_type>")
 @login_required
 def export(report_type):
-    if current_user.role not in ["Admin", "HQ Trainee"]:
+    if current_user.role not in HQ_ROLES:
         abort(403)
 
     province_id = request.args.get("province_id", type=int)

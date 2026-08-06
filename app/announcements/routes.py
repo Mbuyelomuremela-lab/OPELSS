@@ -7,12 +7,10 @@ from app.announcements import announcements_bp
 from app.announcements.forms import AnnouncementForm
 from app.announcements.services import create_announcement
 from app.models.announcement import Announcement
-from app.utils import role_required
 
 
 @announcements_bp.route("/manage")
 @login_required
-@role_required("Admin", "HQ Trainee")
 def manage():
 
     announcements = Announcement.query.order_by(Announcement.created_at.desc()).all()
@@ -22,7 +20,6 @@ def manage():
 
 @announcements_bp.route("/create", methods=["POST"])
 @login_required
-@role_required("Admin", "HQ Trainee")
 def create():
 
     form = AnnouncementForm()

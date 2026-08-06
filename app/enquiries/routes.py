@@ -13,11 +13,14 @@ from app.models.enquiry import Enquiry
 from app.models.lab import Lab
 from app.models.user import User
 from app.extensions import db
+from app.permissions import HQ_ROLES, can_manage_enquiries, can_access
 
 
 def _hq_users():
+    # Enquiries may only be assigned to HQ staff whose role can handle enquiries.
+    assignable_roles = [r for r in HQ_ROLES if can_access(r, "enquiries")]
     return User.query.filter(
-        User.role.in_(["Admin", "HQ Trainee"]),
+        User.role.in_(assignable_roles),
         User.active == True,
     ).order_by(User.full_name).all()
 
@@ -134,7 +137,7 @@ def create():
 @enquiries_bp.route("/<int:enquiry_id>/assign", methods=["POST"])
 @login_required
 def assign(enquiry_id):
-    if current_user.role != "Admin":
+    if not can_manage_enquiries(current_user.role):
         abort(403)
     enquiry = Enquiry.query.get_or_404(enquiry_id)
     if enquiry.status not in ("Open", "Not Resolved"):
@@ -166,10 +169,10 @@ def assign(enquiry_id):
 @enquiries_bp.route("/<int:enquiry_id>/start", methods=["POST"])
 @login_required
 def start(enquiry_id):
-    if current_user.role not in ("Admin", "HQ Trainee"):
+    if current_user.role not in HQ_ROLES:
         abort(403)
     enquiry = Enquiry.query.get_or_404(enquiry_id)
-    if enquiry.assigned_to != current_user.id and current_user.role != "Admin":
+    if enquiry.assigned_to != current_user.id and not can_manage_enquiries(current_user.role):
         abort(403)
     if enquiry.status != "Assigned":
         if request.is_json:
@@ -187,10 +190,10 @@ def start(enquiry_id):
 @enquiries_bp.route("/<int:enquiry_id>/resolve", methods=["POST"])
 @login_required
 def resolve(enquiry_id):
-    if current_user.role not in ("Admin", "HQ Trainee"):
+    if current_user.role not in HQ_ROLES:
         abort(403)
     enquiry = Enquiry.query.get_or_404(enquiry_id)
-    if enquiry.assigned_to != current_user.id and current_user.role != "Admin":
+    if enquiry.assigned_to != current_user.id and not can_manage_enquiries(current_user.role):
         abort(403)
     if enquiry.status != "In Progress":
         if request.is_json:
@@ -220,10 +223,10 @@ def resolve(enquiry_id):
 @enquiries_bp.route("/<int:enquiry_id>/not-resolved", methods=["POST"])
 @login_required
 def not_resolved(enquiry_id):
-    if current_user.role not in ("Admin", "HQ Trainee"):
+    if current_user.role not in HQ_ROLES:
         abort(403)
     enquiry = Enquiry.query.get_or_404(enquiry_id)
-    if enquiry.assigned_to != current_user.id and current_user.role != "Admin":
+    if enquiry.assigned_to != current_user.id and not can_manage_enquiries(current_user.role):
         abort(403)
     if enquiry.status != "In Progress":
         if request.is_json:
@@ -253,7 +256,7 @@ def not_resolved(enquiry_id):
 @enquiries_bp.route("/<int:enquiry_id>/close", methods=["POST"])
 @login_required
 def close(enquiry_id):
-    if current_user.role != "Admin":
+    if not can_manage_enquiries(current_user.role):
         abort(403)
     enquiry = Enquiry.query.get_or_404(enquiry_id)
     close_enquiry(enquiry, closed_by=current_user.id)
@@ -267,7 +270,7 @@ def close(enquiry_id):
 @enquiries_bp.route("/<int:enquiry_id>/reopen", methods=["POST"])
 @login_required
 def reopen(enquiry_id):
-    if current_user.role != "Admin":
+    if not can_manage_enquiries(current_user.role):
         abort(403)
     enquiry = Enquiry.query.get_or_404(enquiry_id)
     if enquiry.status != "Closed":
@@ -289,7 +292,7 @@ def reopen(enquiry_id):
 @enquiries_bp.route("/<int:enquiry_id>/reassign", methods=["POST"])
 @login_required
 def reassign(enquiry_id):
-    if current_user.role != "Admin":
+    if not can_manage_enquiries(current_user.role):
         abort(403)
     enquiry = Enquiry.query.get_or_404(enquiry_id)
     if enquiry.status != "Not Resolved":

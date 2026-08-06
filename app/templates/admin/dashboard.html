@@ -433,9 +433,9 @@
           <div class="col-12">
             <label class="form-label" for="userEditRole">Role</label>
             <select class="form-select" name="role" id="userEditRole" required>
-              <option value="Admin">Admin</option>
-              <option value="HQ Trainee">HQ Trainee</option>
-              <option value="Lab Trainee">Lab Trainee</option>
+              {% for value, label in user_form.role.choices %}
+              <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
             </select>
           </div>
           <div class="col-12">
