@@ -2,6 +2,7 @@ from flask import render_template, abort
 from flask_login import login_required, current_user
 from app.dashboard import dashboard_bp
 from app.utils import sast_today
+from app.permissions import HQ_ROLES
 from app.extensions import db
 from app.models.lab import Lab
 from app.models.province import Province
@@ -16,7 +17,7 @@ from app.models.attendance import AttendanceLog
 @dashboard_bp.route("/")
 @login_required
 def home():
-    if current_user.role in ["Admin", "HQ Trainee"]:
+    if current_user.role in HQ_ROLES:
         lab_count = Lab.query.count()
         province_count = Province.query.count()
         user_count = User.query.count()

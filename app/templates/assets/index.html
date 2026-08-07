@@ -9,7 +9,7 @@ header_title %}Asset Management{% endblock %} {% block content %}
           <button class="btn btn-outline-success" id="assetAddBtn" type="button">Add</button>
           <button class="btn btn-outline-primary" id="assetEditBtn" type="button" disabled>Edit</button>
           <button class="btn btn-outline-danger" id="assetDeleteBtn" type="button" disabled>Delete</button>
-          {% if current_user.role in ['Admin', 'HQ Trainee'] %}
+          {% if is_hq_admin %}
           <a class="btn btn-primary" href="{{ url_for('assets.export', **request.args) }}">Export to Excel</a>
           {% endif %}
         </div>
@@ -34,7 +34,7 @@ header_title %}Asset Management{% endblock %} {% block content %}
               {% endfor %}
             </select>
           </div>
-          {% if current_user.role in ['Admin', 'HQ Trainee'] %}
+          {% if is_hq_admin %}
           <div class="col-auto">
             <label class="form-label small">Lab</label>
             <select name="lab_id" class="form-select">

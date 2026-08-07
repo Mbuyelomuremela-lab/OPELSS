@@ -1,6 +1,7 @@
 from flask import render_template, redirect, url_for, flash, request, send_file, abort, jsonify
 from flask_login import login_required, current_user
 from markupsafe import escape
+from app.permissions import HQ_ROLES
 from app.assets import assets_bp
 from app.assets.forms import AssetForm, PROBLEM_STATUSES
 from app.assets.services import export_assets_excel
@@ -113,7 +114,7 @@ def create_asset():
 @assets_bp.route("/export")
 @login_required
 def export():
-    if current_user.role not in ["Admin", "HQ Trainee"]:
+    if current_user.role not in HQ_ROLES:
         abort(403)
     province_id = request.args.get("province_id", type=int)
     lab_id = request.args.get("lab_id", type=int)

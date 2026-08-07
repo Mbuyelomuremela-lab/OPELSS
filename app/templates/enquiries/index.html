@@ -14,10 +14,10 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
             <button class="btn btn-outline-primary" id="enquiryEditBtn" type="button" disabled>Edit</button>
             <button class="btn btn-outline-danger" id="enquiryDeleteBtn" type="button" disabled>Delete</button>
           {% endif %}
-          {% if current_user.role in ["Admin", "HQ Trainee"] %}
+          {% if is_hq_admin %}
             <button class="btn btn-outline-info" id="enquiryViewBtn" type="button" disabled>View Details</button>
             <button class="btn btn-outline-primary" id="enquiryActionBtn" type="button" disabled>Action</button>
-            {% if current_user.role == "Admin" %}
+            {% if can_manage_enquiries %}
             <button class="btn btn-outline-secondary" id="enquiryAssignBtn" type="button" disabled>Assign</button>
             <button class="btn btn-outline-danger" id="enquiryCloseBtn" type="button" disabled>Close</button>
             <button class="btn btn-outline-success" id="enquiryReopenBtn" type="button" disabled>Reopen</button>
@@ -38,7 +38,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
               {% endfor %}
             </select>
           </div>
-          {% if current_user.role in ["Admin", "HQ Trainee"] %}
+          {% if is_hq_admin %}
           <div class="col-auto">
             <label class="form-label small">Lab</label>
             <select name="lab_id" class="form-select form-select-sm">
@@ -65,7 +65,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
               <th>Category</th>
               <th>Status</th>
               <th>Lab</th>
-              {% if current_user.role in ["Admin", "HQ Trainee"] %}
+              {% if is_hq_admin %}
               <th>Assigned To</th>
               {% endif %}
             </tr>
@@ -110,7 +110,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
                 <span class="badge {{ badge.get(enquiry.status, 'bg-secondary') }}">{{ enquiry.status }}</span>
               </td>
               <td>{{ enquiry.lab.name }}</td>
-              {% if current_user.role in ["Admin", "HQ Trainee"] %}
+              {% if is_hq_admin %}
               <td>{{ enquiry.assignee.full_name if enquiry.assignee else '—' }}</td>
               {% endif %}
             </tr>
@@ -270,7 +270,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
 {% endif %}
 
 {# ── Admin: Assign Modal ── #}
-{% if current_user.role == "Admin" %}
+{% if can_manage_enquiries %}
 <div class="modal fade" id="enquiryAssignModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
     <form id="enquiryAssignForm" method="post" data-ajax-action="true">
@@ -296,7 +296,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
 {% endif %}
 
 {# ── HQ/Admin: Enquiry Detail Modal ── #}
-{% if current_user.role in ["Admin", "HQ Trainee"] %}
+{% if is_hq_admin %}
 <div class="modal fade" id="enquiryDetailModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
     <div class="modal-header">
@@ -359,7 +359,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
 {% endif %}
 
 {# ── HQ/Admin: Action Modal (In Progress / Resolve / Not Resolved) ── #}
-{% if current_user.role in ["Admin", "HQ Trainee"] %}
+{% if is_hq_admin %}
 <div class="modal fade" id="enquiryActionModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
     <div class="modal-header">
@@ -406,7 +406,7 @@ header_title %}Enquiry Management{% endblock %} {% block content %}
 </form>
 
 {# ── Close form ── #}
-{% if current_user.role == "Admin" %}
+{% if can_manage_enquiries %}
 <form id="enquiryCloseForm" method="post" class="d-none">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 </form>
@@ -454,16 +454,16 @@ document.addEventListener("DOMContentLoaded", () => {
     deleteBtn.disabled = !canModify;
     {% endif %}
 
-    {% if current_user.role in ["Admin", "HQ Trainee"] %}
+    {% if is_hq_admin %}
     document.getElementById("enquiryViewBtn").disabled = false;
     const actionBtn = document.getElementById("enquiryActionBtn");
     const canAction = (status === "Assigned" && assignedTo === "{{ current_user.id }}")
-                   || (status === "In Progress" && (assignedTo === "{{ current_user.id }}" {% if current_user.role == "Admin" %} || true {% endif %}))
-                   {% if current_user.role == "Admin" %}|| status === "Assigned"{% endif %};
+                   || (status === "In Progress" && (assignedTo === "{{ current_user.id }}" {% if can_manage_enquiries %} || true {% endif %}))
+                   {% if can_manage_enquiries %}|| status === "Assigned"{% endif %};
     actionBtn.disabled = !canAction;
     {% endif %}
 
-    {% if current_user.role == "Admin" %}
+    {% if can_manage_enquiries %}
     const assignBtn = document.getElementById("enquiryAssignBtn");
     const closeBtn = document.getElementById("enquiryCloseBtn");
     const reopenBtn = document.getElementById("enquiryReopenBtn");
@@ -537,7 +537,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   {% endif %}
 
-  {% if current_user.role in ["Admin", "HQ Trainee"] %}
+  {% if is_hq_admin %}
   // ── View Details ──
   document.getElementById("enquiryViewBtn")?.addEventListener("click", () => {
     if (!selected) return;
@@ -580,7 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   {% endif %}
 
-  {% if current_user.role == "Admin" %}
+  {% if can_manage_enquiries %}
   // ── Assign ──
   document.getElementById("enquiryAssignBtn")?.addEventListener("click", () => {
     if (!selected) return;
@@ -609,7 +609,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   {% endif %}
 
-  {% if current_user.role in ["Admin", "HQ Trainee"] %}
+  {% if is_hq_admin %}
   // ── Action modal ──
   document.getElementById("enquiryActionBtn")?.addEventListener("click", () => {
     if (!selected) return;
